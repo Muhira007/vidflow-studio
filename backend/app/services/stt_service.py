@@ -38,20 +38,18 @@ def burn_subtitles_to_video(input_video: str, subtitle_file: str, output_video: 
             return f"&H00{h[4:6]}{h[2:4]}{h[0:2]}"
         return "&H00FFFFFF"
         
-    # Ambil resolusi video untuk menghitung MarginV
-    probe = ffmpeg.probe(input_video)
-    video_stream = next(s for s in probe['streams'] if s['codec_type'] == 'video')
-    video_height = int(video_stream.get('height', 1080))
-
     font_color = hex_to_ass(settings.get("caption_color", "#FFFFFF"))
     outline_color = hex_to_ass(settings.get("caption_outline", "#000000"))
     
     # Position (0-100)
     position_percent = settings.get("caption_position", 15)
-    # Gunakan Alignment=2 (Bottom Center) dan dorong ke atas menggunakan MarginV
-    margin_v = int((position_percent / 100.0) * video_height)
+    
+    # Secara default untuk file SRT, FFmpeg/libass menggunakan resolusi kanvas virtual 384x288 (PlayResY=288).
+    # Oleh karena itu, MarginV dan Fontsize harus dihitung terhadap tinggi 288, BUKAN tinggi asli video.
+    virtual_height = 288
+    margin_v = int((position_percent / 100.0) * virtual_height)
     # Beri jarak aman agar teks tidak terpotong di atas
-    margin_v = min(margin_v, video_height - int(font_size * 1.5))
+    margin_v = min(margin_v, virtual_height - int(font_size * 1.5))
     
     outline_enabled = settings.get("caption_outline_enabled", True)
     outline_size = settings.get("caption_outline_size", 2)
