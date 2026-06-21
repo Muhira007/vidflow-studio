@@ -66,3 +66,23 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         ],
         "recentJobs": recent_jobs_data
     }
+@router.get("/logs")
+def get_all_logs(db: Session = Depends(get_db)):
+    logs = db.query(JobLog).order_by(JobLog.created_at.desc()).limit(100).all()
+    
+    logs_data = []
+    for log in logs:
+        created_at = log.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+            
+        logs_data.append({
+            "id": log.id,
+            "vid": log.video_id,
+            "step": log.step.capitalize(),
+            "status": log.status.capitalize(),
+            "msg": log.message or "-",
+            "time": created_at.strftime("%Y-%m-%d %H:%M:%S")
+        })
+        
+    return {"logs": logs_data}

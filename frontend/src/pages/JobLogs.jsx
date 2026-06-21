@@ -1,13 +1,27 @@
+import { useState, useEffect } from 'react';
 import { Search, Filter, Download } from 'lucide-react';
+import api from '../api';
 
 export default function JobLogs() {
-  const logs = [
-    { time: '2026-06-20 14:32:10', vid: 'vid_0921c', step: 'Generate Cover', status: 'Failed', msg: 'FFmpeg error: Unable to extract frame. Video stream may be corrupted.' },
-    { time: '2026-06-20 14:30:05', vid: 'vid_0921c', step: 'Auto Caption', status: 'Success', msg: 'Generated 45 subtitle segments.' },
-    { time: '2026-06-20 14:28:12', vid: 'vid_0921c', step: 'Silence Cut', status: 'Success', msg: 'Removed 12 segments (Total: 1m 5s padding cut)' },
-    { time: '2026-06-20 13:45:00', vid: 'vid_0920b', step: 'Render', status: 'Success', msg: 'Exported to output/vid_0920b/vid_0920b_1080p.mp4 successfully.' },
-    { time: '2026-06-20 13:20:15', vid: 'vid_0920b', step: 'Generate Cover', status: 'Success', msg: 'Cover created from template Minimalist Bold.' },
-  ];
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchLogs = async () => {
+    try {
+      const response = await api.get('/dashboard/logs');
+      setLogs(response.data.logs);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div>
@@ -51,13 +65,21 @@ export default function JobLogs() {
               </tr>
             </thead>
             <tbody style={{ fontSize: '0.9rem' }}>
-              {logs.map((log, idx) => (
+              {loading && logs.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading logs...</td>
+                </tr>
+              ) : logs.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>No logs found.</td>
+                </tr>
+              ) : logs.map((log, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
                   <td style={{ padding: '16px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{log.time}</td>
                   <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>{log.vid}</td>
                   <td style={{ padding: '16px 12px' }}>{log.step}</td>
                   <td style={{ padding: '16px 12px' }}>
-                    <span className={`badge ${log.status === 'Failed' ? 'badge-danger' : 'badge-success'}`}>
+                    <span className={`badge ${log.status === 'Failed' ? 'badge-danger' : log.status === 'Success' ? 'badge-success' : 'badge-warning'}`}>
                       {log.status}
                     </span>
                   </td>
