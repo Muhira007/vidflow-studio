@@ -44,8 +44,7 @@ export default function VideoList() {
     }
   };
 
-  const handleDelete = async (videoId) => {
-    if (!window.confirm(`Yakin ingin menghapus secara HARD DELETE video ${videoId} dari database dan foldernya?`)) return;
+  const executeDelete = async (videoId) => {
     try {
       await api.delete(`/videos/${videoId}`);
       toast.success('Video berhasil dihapus!');
@@ -53,6 +52,34 @@ export default function VideoList() {
     } catch (error) {
       toast.error('Gagal menghapus video: ' + (error.response?.data?.detail || error.message));
     }
+  };
+
+  const handleDelete = (videoId) => {
+    toast((t) => (
+      <div style={{ padding: '4px' }}>
+        <p style={{ margin: '0 0 16px 0', fontWeight: '500', lineHeight: '1.5' }}>
+          Yakin ingin menghapus secara <strong style={{color: 'var(--danger)'}}>HARD DELETE</strong> video <strong style={{color: 'var(--accent-primary)'}}>{videoId}</strong> dari database dan folder *source*?
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+          <button 
+            className="btn btn-secondary" 
+            style={{ padding: '6px 16px', fontSize: '0.85rem' }} 
+            onClick={() => toast.dismiss(t.id)}>
+            Batal
+          </button>
+          <button 
+            className="btn btn-primary" 
+            style={{ padding: '6px 16px', fontSize: '0.85rem', background: 'var(--danger)', border: 'none' }} 
+            onClick={() => { toast.dismiss(t.id); executeDelete(videoId); }}>
+            Ya, Hapus!
+          </button>
+        </div>
+      </div>
+    ), { 
+      duration: Infinity, 
+      position: 'top-center',
+      style: { minWidth: '340px' }
+    });
   };
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading videos...</div>;
