@@ -1,13 +1,39 @@
+import { useState, useEffect } from 'react';
 import { Filter, Play, RotateCcw, MoreHorizontal } from 'lucide-react';
+import api from '../api';
 
 export default function VideoList() {
-  const videos = [
-    { id: 'vid_0921a', date: '2026-06-20', originalDur: '05:20', cutDur: '04:15', status: 'Processing', type: 'warning' },
-    { id: 'vid_0921b', date: '2026-06-20', originalDur: '08:45', cutDur: '07:30', status: 'Processing', type: 'warning' },
-    { id: 'vid_0921c', date: '2026-06-20', originalDur: '12:10', cutDur: '--:--', status: 'Failed', type: 'danger' },
-    { id: 'vid_0920a', date: '2026-06-19', originalDur: '04:30', cutDur: '03:45', status: 'Completed', type: 'success' },
-    { id: 'vid_0920b', date: '2026-06-19', originalDur: '15:00', cutDur: '12:20', status: 'Completed', type: 'success' },
-  ];
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchVideos = async () => {
+    try {
+      const response = await api.get('/videos');
+      setVideos(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVideos();
+    const interval = setInterval(fetchVideos, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleProcess = async (videoId) => {
+    try {
+      await api.post(`/videos/${videoId}/process`);
+      alert('Proses dimulai untuk video: ' + videoId);
+      fetchVideos();
+    } catch (error) {
+      alert('Gagal memulai proses: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading videos...</div>;
 
   return (
     <div>
@@ -39,41 +65,46 @@ export default function VideoList() {
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>ID Video</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>Tanggal</th>
-                <th style={{ padding: '16px 12px', fontWeight: 500 }}>Durasi Asli</th>
-                <th style={{ padding: '16px 12px', fontWeight: 500 }}>Durasi Cut</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>Status</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'right' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {videos.map((vid, idx) => (
-                <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                  <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>{vid.id}</td>
-                  <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{vid.date}</td>
-                  <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{vid.originalDur}</td>
-                  <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{vid.cutDur}</td>
-                  <td style={{ padding: '16px 12px' }}>
-                    <span className={`badge badge-${vid.type}`}>{vid.status}</span>
-                  </td>
-                  <td style={{ padding: '16px 12px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                      {vid.status === 'Failed' && (
-                        <button className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Retry">
-                          <RotateCcw size={16} />
+              {videos.length === 0 ? (
+                <tr><td colSpan="4" style={{textAlign: 'center', padding: '20px'}}>Belum ada video terdaftar.</td></tr>
+              ) : videos.map((vid, idx) => {
+                let badgeType = 'warning';
+                if (vid.status === 'COMPLETED') badgeType = 'success';
+                if (vid.status === 'FAILED') badgeType = 'danger';
+                if (vid.status === 'PENDING') badgeType = 'secondary';
+                
+                return (
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>{vid.id}</td>
+                    <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{new Date(vid.created_at).toLocaleDateString()}</td>
+                    <td style={{ padding: '16px 12px' }}>
+                      <span className={`badge badge-${badgeType}`}>{vid.status}</span>
+                    </td>
+                    <td style={{ padding: '16px 12px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        {vid.status === 'FAILED' && (
+                          <button onClick={() => handleProcess(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Retry">
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                        {(vid.status === 'PENDING' || vid.status === 'FAILED') && (
+                          <button onClick={() => handleProcess(vid.id)} className="btn btn-primary" style={{ padding: '6px 10px' }} title="Proses">
+                            <Play size={16} />
+                          </button>
+                        )}
+                        <button className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Detail">
+                          <MoreHorizontal size={16} />
                         </button>
-                      )}
-                      {vid.status === 'Pending' && (
-                        <button className="btn btn-primary" style={{ padding: '6px 10px' }} title="Proses">
-                          <Play size={16} />
-                        </button>
-                      )}
-                      <button className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Detail">
-                        <MoreHorizontal size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
