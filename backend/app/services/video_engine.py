@@ -123,19 +123,38 @@ def extract_audio(input_video: str, output_audio: str):
     return output_audio
 
 def render_final_video(input_video: str, output_video: str, resolution: str = "1080p"):
-    """Render video final sesuai resolusi yang diinginkan."""
-    # Resolusi umum: 720p (1280x720), 1080p (1920x1080), 4k (3840x2160)
-    scale_dict = {
-        "720p": "1280x720",
-        "1080p": "1920x1080",
-        "4K": "3840x2160"
-    }
-    scale = scale_dict.get(resolution.upper(), "1920x1080")
+    """Render video final secara dinamis dengan mempertahankan aspect ratio."""
+    # Ambil info resolusi asli
+    probe = ffmpeg.probe(input_video)
+    video_stream = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+    width = int(video_stream.get('width', 1920))
+    height = int(video_stream.get('height', 1080))
     
+    # Deteksi apakah orientasi horizontal (landscape) atau vertical/square (portrait)
+    is_vertical = height >= width
+
+    # Tentukan skala maksimum berdasarkan parameter resolution
+    if resolution.upper() == "4K":
+        target_max = 3840 if not is_vertical else 2160
+    elif resolution.upper() == "720P":
+        target_max = 1280 if not is_vertical else 720
+    else: # default 1080p
+        target_max = 1920 if not is_vertical else 1080
+
+    # Gunakan filter scale ffmpeg yang otomatis mempertahankan rasio aspek
+    # Nilai -2 memastikan dimensi akhir bisa dibagi 2 (syarat wajib codec libx264)
+    if not is_vertical:
+        scale_w = target_max
+        scale_h = -2
+    else:
+        # Jika video vertikal (seperti TikTok/Reels), target_max (misal 1080) menjadi tingginya atau lebarnya
+        scale_w = -2
+        scale_h = target_max
+
     (
         ffmpeg
         .input(input_video)
-        .filter('scale', scale)
+        .filter('scale', w=scale_w, h=scale_h)
         .output(output_video, vcodec='libx264', preset='fast', crf=23, acodec='aac')
         .run(overwrite_output=True)
     )
