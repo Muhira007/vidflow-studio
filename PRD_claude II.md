@@ -168,9 +168,9 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 
 | Parameter | Opsi |
 |---|---|
-| Jenis font | Dropdown daftar font tersedia |
-| Ukuran font | Slider/numerik |
-| Posisi | Atas / Tengah / Bawah (dengan offset) |
+| Jenis font | Dropdown daftar font tersedia (font native Linux) |
+| Ukuran font | Slider/numerik (5px - 50px) |
+| Posisi | Slider Persentase 0-100% (berbasis MarginV virtual 288px) |
 | Warna teks & outline | Color picker |
 | Style | Normal / highlight kata aktif (karaoke-style, ala CapCut) |
 
@@ -346,9 +346,9 @@ erDiagram
 - Input: threshold dB, durasi minimum diam, padding (khusus Level 2)
 
 **Konfigurasi Caption**
-- Dropdown jenis font, slider ukuran font
-- Color picker warna teks & outline
-- Dropdown posisi (atas/tengah/bawah)
+- Dropdown jenis font (terbatas pada font sistem Linux seperti DejaVu/Ubuntu), slider ukuran font (rentang 5-50px)
+- Color picker warna teks & outline, serta toggle untuk mengaktifkan/menonaktifkan outline + ketebalan outline
+- Slider persentase posisi (0% - 100%) menggunakan perhitungan MarginV di kanvas virtual ASS 288px
 - Toggle style highlight kata aktif (karaoke-style)
 
 **Konfigurasi Cover**

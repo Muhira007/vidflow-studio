@@ -100,5 +100,15 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5433/auto_video_editor"
 REDIS_URL="redis://localhost:6379/0"
 ```
 
+## 📝 Tips & Troubleshooting
+
+- **Restart Celery:** Jika Anda melakukan perubahan *source code* Python di backend (misal merombak algoritma *silence cut* atau struktur *auto caption*), pastikan untuk mematikan Celery (`Ctrl+C`) lalu menyalakannya kembali. Celery tidak *auto-reload* seperti FastAPI.
+- **Tampilan Auto Caption:**
+  - **Jenis Font:** Sistem hanya memproses font Linux bawaan yang terpasang di *server/container* Anda (seperti `DejaVu Sans`, `Ubuntu`, `DejaVu Serif`).
+  - **Posisi Persentase:** Tuas geser 0% (Bawah) hingga 100% (Atas) dikalkulasikan secara aman menggunakan tinggi kanvas virtual *SubStation Alpha* (ASS) bawaan FFmpeg (yaitu `288px`), sehingga *subtitle* tidak akan terdorong keluar batas layar sekalipun pada video *1080p*.
+- **Toleransi *Silence Cut*:** Khusus untuk **Level 1** (*Trim* Awal & Akhir), sistem akan menyisakan *padding/buffer* selama `0.5 detik` pada awal video untuk memastikan huruf pertama dari pembicaraan (*speech*) Anda tidak terpotong akibat keterlambatan sensor mikrofon kamera.
+
+---
+
 ## 📜 Lisensi
 Aplikasi ini ditujukan untuk mempermudah produksi video massal dan otomatisasi kreator konten.
