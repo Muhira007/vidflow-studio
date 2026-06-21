@@ -14,7 +14,7 @@ Dokumen ini melacak status pengembangan aplikasi **Auto Video Editor** berdasark
 - [x] Desain dan Migrasi Skema Database via SQLAlchemy.
 - [x] Pembuatan integrasi Celery Worker untuk pemrosesan asinkron.
 - [x] Script `watcher.py` untuk mendeteksi folder video baru secara otomatis.
-- [x] Update penggunaan SDK **Deepgram v3.x** dan **PySceneDetect v0.6+**.
+- [x] Update penggunaan SDK **OpenAI gpt-4o-mini-transcribe** dan **PySceneDetect v0.6+**.
 - [x] Pembuatan skrip Integration Test (`test_pipeline.py`) untuk memvalidasi aliran data.
 - [x] Dokumentasi Lengkap (`README.md`).
 

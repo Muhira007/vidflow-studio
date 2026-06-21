@@ -83,7 +83,7 @@ npm run dev
 ## 💡 Cara Penggunaan (Workflow)
 
 1. **Buka Dashboard UI:** Buka browser dan akses URL `http://localhost:5173/`.
-2. **Konfigurasi AI:** Masuk ke menu **Global Settings** di sebelah kiri. Masukkan *API Key* Anda (Deepgram / OpenAI) untuk keperluan pengenalan suara otomatis (*Auto Caption*), lalu simpan.
+2. **Konfigurasi AI:** Masuk ke menu **Global Settings** di sebelah kiri. Masukkan *API Key* Anda (OpenAI) untuk keperluan pengenalan suara otomatis (*Auto Caption*), lalu simpan.
 3. **Daftarkan Video:**
    - Secara bawaan, Anda dapat menggunakan script `python3 app/watcher.py` untuk memantau folder `source/`.
    - Cukup buat sub-folder baru di dalam `source/` dan letakkan file `.mp4` Anda di sana.
