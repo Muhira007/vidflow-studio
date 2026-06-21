@@ -4,11 +4,11 @@ import api from '../api';
 import toast from 'react-hot-toast';
 
 export default function ConfigCaption() {
-  const [fontName, setFontName] = useState('Arial');
-  const [fontSize, setFontSize] = useState(24);
+  const [fontName, setFontName] = useState('DejaVu Sans');
+  const [fontSize, setFontSize] = useState(60);
   const [fontColor, setFontColor] = useState('#ffffff');
   const [outlineColor, setOutlineColor] = useState('#000000');
-  const [position, setPosition] = useState(2); // 2: bottom, 5: center, 8: top
+  const [position, setPosition] = useState(2); // 2: bottom, 10: center, 6: top
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,19 +56,17 @@ export default function ConfigCaption() {
         <div className="form-group">
           <label className="form-label">Jenis Font</label>
           <select className="form-control" value={fontName} onChange={e => setFontName(e.target.value)}>
-            <option value="Arial">Arial</option>
-            <option value="Montserrat">Montserrat</option>
-            <option value="Inter">Inter</option>
-            <option value="Bebas Neue">Bebas Neue</option>
-            <option value="Arial Black">Arial Black</option>
-            <option value="Comic Sans MS">Comic Sans MS</option>
+            <option value="DejaVu Sans">DejaVu Sans</option>
+            <option value="Ubuntu">Ubuntu</option>
+            <option value="Ubuntu Sans">Ubuntu Sans</option>
+            <option value="DejaVu Serif">DejaVu Serif</option>
           </select>
         </div>
 
         <div className="form-group">
           <label className="form-label">Ukuran Font</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <input type="range" min="12" max="72" value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} style={{ flex: 1 }} />
+            <input type="range" min="20" max="150" value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} style={{ flex: 1 }} />
             <span style={{ minWidth: '40px', textAlign: 'right', fontWeight: 'bold' }}>{fontSize}px</span>
           </div>
         </div>
@@ -93,8 +91,8 @@ export default function ConfigCaption() {
           <label className="form-label">Posisi Caption</label>
           <select className="form-control" value={position} onChange={e => setPosition(parseInt(e.target.value))}>
             <option value={2}>Tengah Bawah</option>
-            <option value={8}>Tengah Atas</option>
-            <option value={5}>Tengah (Center)</option>
+            <option value={10}>Tengah (Center)</option>
+            <option value={6}>Tengah Atas</option>
           </select>
         </div>
 
