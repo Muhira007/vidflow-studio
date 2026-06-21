@@ -42,7 +42,11 @@ def burn_subtitles_to_video(input_video: str, subtitle_file: str, output_video: 
     outline_color = hex_to_ass(settings.get("caption_outline", "#000000"))
     alignment = settings.get("caption_position", 2)
     
-    force_style = f"Fontname={font_name},Fontsize={font_size},PrimaryColour={font_color},OutlineColour={outline_color},Alignment={alignment},Outline=2,Shadow=1"
+    outline_enabled = settings.get("caption_outline_enabled", True)
+    outline_size = settings.get("caption_outline_size", 2)
+    final_outline = outline_size if outline_enabled else 0
+    
+    force_style = f"Fontname={font_name},Fontsize={font_size},PrimaryColour={font_color},OutlineColour={outline_color},Alignment={alignment},Outline={final_outline},Shadow=1"
 
     in_file = ffmpeg.input(input_video)
     video = in_file.video.filter('subtitles', subtitle_file, force_style=force_style)

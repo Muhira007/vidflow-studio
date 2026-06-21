@@ -5,8 +5,10 @@ import toast from 'react-hot-toast';
 
 export default function ConfigCaption() {
   const [fontName, setFontName] = useState('DejaVu Sans');
-  const [fontSize, setFontSize] = useState(60);
+  const [fontSize, setFontSize] = useState(24);
   const [fontColor, setFontColor] = useState('#ffffff');
+  const [outlineEnabled, setOutlineEnabled] = useState(true);
+  const [outlineSize, setOutlineSize] = useState(2);
   const [outlineColor, setOutlineColor] = useState('#000000');
   const [position, setPosition] = useState(2); // 2: bottom, 10: center, 6: top
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,8 @@ export default function ConfigCaption() {
       if (res.data.caption_font) setFontName(res.data.caption_font);
       if (res.data.caption_size) setFontSize(res.data.caption_size);
       if (res.data.caption_color) setFontColor(res.data.caption_color);
+      if (res.data.caption_outline_enabled !== undefined) setOutlineEnabled(res.data.caption_outline_enabled);
+      if (res.data.caption_outline_size !== undefined) setOutlineSize(res.data.caption_outline_size);
       if (res.data.caption_outline) setOutlineColor(res.data.caption_outline);
       if (res.data.caption_position) setPosition(res.data.caption_position);
     } catch (err) {
@@ -36,6 +40,8 @@ export default function ConfigCaption() {
         caption_font: fontName,
         caption_size: fontSize,
         caption_color: fontColor,
+        caption_outline_enabled: outlineEnabled,
+        caption_outline_size: outlineSize,
         caption_outline: outlineColor,
         caption_position: position
       });
@@ -80,16 +86,39 @@ export default function ConfigCaption() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Warna Outline (Stroke)</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <input type="color" value={outlineColor} onChange={e => setOutlineColor(e.target.value)} style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} />
-            <span style={{ fontFamily: 'monospace' }}>{outlineColor.toUpperCase()}</span>
+          <label className="form-label">Aktifkan Outline (Stroke)</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', height: '40px' }}>
+            <label className="switch">
+              <input type="checkbox" checked={outlineEnabled} onChange={e => setOutlineEnabled(e.target.checked)} />
+              <span className="slider"></span>
+            </label>
+            <span>{outlineEnabled ? 'Aktif' : 'Nonaktif'}</span>
           </div>
         </div>
 
-        <div className="form-group">
+        {outlineEnabled && (
+          <>
+            <div className="form-group">
+              <label className="form-label">Warna Outline</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <input type="color" value={outlineColor} onChange={e => setOutlineColor(e.target.value)} style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} />
+                <span style={{ fontFamily: 'monospace' }}>{outlineColor.toUpperCase()}</span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Ketebalan Outline</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <input type="range" min="1" max="10" value={outlineSize} onChange={e => setOutlineSize(parseInt(e.target.value))} style={{ flex: 1 }} />
+                <span style={{ minWidth: '40px', textAlign: 'right', fontWeight: 'bold' }}>{outlineSize}px</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="form-group" style={{ gridColumn: outlineEnabled ? 'span 2' : 'auto' }}>
           <label className="form-label">Posisi Caption</label>
-          <select className="form-control" value={position} onChange={e => setPosition(parseInt(e.target.value))}>
+          <select className="form-control" value={position} onChange={e => setPosition(parseInt(e.target.value))} style={{ maxWidth: '380px' }}>
             <option value={2}>Tengah Bawah</option>
             <option value={10}>Tengah (Center)</option>
             <option value={6}>Tengah Atas</option>
