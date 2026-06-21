@@ -29,3 +29,34 @@ def process_video(video_id: str, db: Session = Depends(get_db)):
     # Trigger celery task
     task = process_video_pipeline.delay(video_id)
     return {"message": f"Processing started for video {video_id}", "task_id": task.id}
+
+import os
+@router.post("/sync")
+def sync_videos(db: Session = Depends(get_db)):
+    source_dir = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
+    if not os.path.exists(source_dir):
+        return {"message": "Source directory does not exist", "added": 0}
+        
+    added = 0
+    for item in os.listdir(source_dir):
+        item_path = os.path.join(source_dir, item)
+        if os.path.isdir(item_path):
+            # Check if video already in db
+            existing = db.query(Video).filter(Video.id == item).first()
+            if not existing:
+                new_vid = Video(
+                    id=item,
+                    status="PENDING",
+                    silence_cut_level=2,
+                    silence_threshold=-30.0,
+                    min_silence_duration=0.5,
+                    silence_padding=150,
+                    cover_template="default",
+                    resolution="1080p"
+                )
+                db.add(new_vid)
+                added += 1
+    
+    if added > 0:
+        db.commit()
+    return {"message": f"Synced successfully", "added": added}

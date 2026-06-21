@@ -33,6 +33,16 @@ export default function VideoList() {
     }
   };
 
+  const handleSync = async () => {
+    try {
+      const res = await api.post('/videos/sync');
+      alert(`Sinkronisasi berhasil! ${res.data.added} video baru ditambahkan ke database.`);
+      fetchVideos();
+    } catch (error) {
+      alert('Gagal sinkronisasi: ' + error.message);
+    }
+  };
+
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading videos...</div>;
 
   return (
@@ -43,6 +53,9 @@ export default function VideoList() {
           <p className="page-subtitle" style={{ marginBottom: 0 }}>Kelola dan pantau semua video dalam antrian Anda.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={handleSync} className="btn btn-primary">
+            <RotateCcw size={18} /> Sync Folder
+          </button>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <select className="form-control" style={{ width: '160px' }}>
               <option>Semua Status</option>
