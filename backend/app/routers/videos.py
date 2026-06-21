@@ -72,6 +72,30 @@ def update_caption_settings(settings: dict):
         json.dump(current, f)
     return {"message": "Caption settings updated"}
 
+@router.get("/settings/silence")
+def read_silence_settings():
+    return get_global_settings()
+
+@router.post("/settings/silence")
+def update_silence_settings(settings: dict):
+    current = get_global_settings()
+    current.update(settings)
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(current, f)
+    return {"message": "Silence settings updated"}
+
+@router.get("/settings/cover")
+def read_cover_settings():
+    return get_global_settings()
+
+@router.post("/settings/cover")
+def update_cover_settings(settings: dict):
+    current = get_global_settings()
+    current.update(settings)
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(current, f)
+    return {"message": "Cover settings updated"}
+
 @router.post("/sync")
 def sync_videos(db: Session = Depends(get_db)):
     source_dir = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
@@ -80,6 +104,11 @@ def sync_videos(db: Session = Depends(get_db)):
         
     settings = get_global_settings()
     res = settings.get("resolution", "1080p")
+    cut_level = settings.get("silence_cut_level", 2)
+    threshold = settings.get("silence_threshold", -30.0)
+    min_dur = settings.get("min_silence_duration", 0.5)
+    padding = settings.get("silence_padding", 150)
+    cover_template = settings.get("cover_template", "default")
         
     added = 0
     for item in os.listdir(source_dir):
@@ -91,11 +120,11 @@ def sync_videos(db: Session = Depends(get_db)):
                 new_vid = Video(
                     id=item,
                     status="PENDING",
-                    silence_cut_level=2,
-                    silence_threshold=-30.0,
-                    min_silence_duration=0.5,
-                    silence_padding=150,
-                    cover_template="default",
+                    silence_cut_level=cut_level,
+                    silence_threshold=threshold,
+                    min_silence_duration=min_dur,
+                    silence_padding=padding,
+                    cover_template=cover_template,
                     resolution=res
                 )
                 db.add(new_vid)

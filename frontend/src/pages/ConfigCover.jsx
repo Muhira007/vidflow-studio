@@ -1,12 +1,47 @@
+import { useState, useEffect } from 'react';
 import { Save, Upload } from 'lucide-react';
+import api from '../api';
 
 export default function ConfigCover() {
+  const [activeTemplate, setActiveTemplate] = useState('tpl_1');
+  const [loading, setLoading] = useState(true);
+
   const templates = [
-    { id: 'tpl_1', name: 'Minimalist Bold', active: true },
-    { id: 'tpl_2', name: 'News Style', active: false },
-    { id: 'tpl_3', name: 'Gaming Focus', active: false },
-    { id: 'tpl_4', name: 'Vlog Setup', active: false },
+    { id: 'tpl_1', name: 'Minimalist Bold' },
+    { id: 'tpl_2', name: 'News Style' },
+    { id: 'tpl_3', name: 'Gaming Focus' },
+    { id: 'tpl_4', name: 'Vlog Setup' },
   ];
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get('/videos/settings/cover');
+      if (res.data.cover_template) {
+        setActiveTemplate(res.data.cover_template);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await api.post('/videos/settings/cover', {
+        cover_template: activeTemplate
+      });
+      alert('Pengaturan Cover berhasil disimpan!');
+    } catch (err) {
+      alert('Gagal menyimpan pengaturan: ' + err.message);
+    }
+  };
+
+  if (loading) return <div>Loading settings...</div>;
 
   return (
     <div style={{ maxWidth: '900px' }}>
@@ -16,28 +51,32 @@ export default function ConfigCover() {
       <div className="card glass-panel" style={{ marginBottom: '32px' }}>
         <h3 style={{ marginBottom: '20px' }}>Pilihan Template</h3>
         <div className="grid-cols-4">
-          {templates.map(tpl => (
-            <div 
-              key={tpl.id}
-              style={{
-                aspectRatio: '16/9',
-                background: tpl.active ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))' : 'rgba(0,0,0,0.3)',
-                border: `2px solid ${tpl.active ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'var(--transition-fast)'
-              }}
-            >
-              {tpl.active && (
-                <div style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'var(--accent-primary)', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>
-              )}
-              <span style={{ fontWeight: 500 }}>{tpl.name}</span>
-            </div>
-          ))}
+          {templates.map(tpl => {
+            const isActive = tpl.id === activeTemplate;
+            return (
+              <div 
+                key={tpl.id}
+                onClick={() => setActiveTemplate(tpl.id)}
+                style={{
+                  aspectRatio: '16/9',
+                  background: isActive ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))' : 'rgba(0,0,0,0.3)',
+                  border: `2px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'var(--transition-fast)'
+                }}
+              >
+                {isActive && (
+                  <div style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'var(--accent-primary)', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>
+                )}
+                <span style={{ fontWeight: 500 }}>{tpl.name}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -82,7 +121,7 @@ export default function ConfigCover() {
       </div>
 
       <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary">
+        <button onClick={handleSave} className="btn btn-primary">
           <Save size={18} /> Simpan Konfigurasi
         </button>
       </div>
