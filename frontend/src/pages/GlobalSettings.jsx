@@ -75,28 +75,7 @@ export default function GlobalSettings() {
           </div>
         </div>
 
-        <div className="divider"></div>
 
-        <div className="config-section">
-          <h2 className="section-title">
-            <Key size={18} style={{ marginRight: '8px' }} />
-            Deepgram API Key
-          </h2>
-          <p className="section-description">
-            Used for Nova-3 transcription (STT) as an alternative to OpenAI.
-          </p>
-          <div className="input-group">
-            <input
-              type="password"
-              className="text-input"
-              value={deepgramKey}
-              onChange={(e) => setDeepgramKey(e.target.value)}
-              placeholder="Your Deepgram API Key..."
-              style={{ width: '100%', maxWidth: '500px' }}
-            />
-          </div>
-        </div>
-        
         {saveMessage && (
           <div style={{ marginTop: '16px', color: saveMessage.includes('success') ? 'var(--success-color)' : 'var(--danger-color)' }}>
             {saveMessage}
