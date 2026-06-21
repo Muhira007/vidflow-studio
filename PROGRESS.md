@@ -22,7 +22,7 @@ Dokumen ini melacak status pengembangan aplikasi **Auto Video Editor** berdasark
 ---
 
 ## 🏗️ Dalam Pengerjaan (WIP) / Tertunda
-- [ ] Implementasi UI Dashboard Frontend agar sepenuhnya tersambung dengan API Backend.
+- [x] Implementasi UI Dashboard Frontend agar sepenuhnya tersambung dengan API Backend.
 - [ ] Pengujian modul FFmpeg `silencedetect` secara nyata dengan file video berat.
 - [ ] Pembuatan fungsi *burn-in* subtitle ke dalam video menggunakan FFmpeg.
 - [ ] *Image generation* untuk cover video dinamis menggunakan PIL.
