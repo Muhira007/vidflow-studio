@@ -1,0 +1,81 @@
+Tentu, tidak masalah! Menggunakan akun  root  secara tidak sengaja sering kali menyebabkan masalah perizinan (permission issues) pada virtual
+  environment Python dan node_modules. Mari kita ulang dari awal dengan langkah yang sangat bersih dan terstruktur.
+  Sebagai catatan, saya telah menyusun panduan ini dan mengadaptasi source code backend kita menggunakan referensi pustaka terbaru dari MCP Context7:
+  • Deepgram SDK v3.x: Menggunakan  client.listen.v1.media  (bukan lagi  PrerecordedOptions ).
+  • PySceneDetect v0.6+: Menggunakan arsitektur  open_video  yang terbaru (meninggalkan  VideoManager  yang sudah deprecated).
+  • FFmpeg-Python: Menulis filtergraph modern ( trim ,  atrim ) untuk silence cut.
+  ──────
+  ### 🧹 Langkah 0: Persiapan & Pembersihan Akses Root
+
+  Sebelum mulai, pastikan Anda TIDAK berada dalam mode root ( root@... ). Kembalilah ke user biasa Anda.
+  Jika sebelumnya ada file yang terkunci karena root, jalankan perintah ini di root folder proyek ( claude2/ ) untuk mengembalikan hak akses ke user
+  Anda:
+
+    sudo chown -R USER:USER .
+    ──────
+  ### 🐳 Langkah 1: Menjalankan Database & Redis (Terminal 1)
+
+  Pastikan Anda berada di direktori root proyek ( /home/kangdemuh/aplikasi/video-editor/claude2/ ).
+
+    docker-compose up -d
+
+  (Catatan: Tergantung konfigurasi Docker di Ubuntu Anda, Anda mungkin perlu menambahkan  sudo  hanya untuk perintah ini:  sudo docker-compose up -d )
+  ──────
+  ### ⚙️ Langkah 2: Instalasi Dependensi Backend (Terminal 2)
+
+  Buka tab terminal baru (sebagai user biasa). Masuk ke folder backend dan mari kita buat virtual environment baru yang bersih:
+
+  1. Masuk ke folder backend:
+    cd backend
+
+  2. Hapus venv lama (jika ada, untuk memastikan kebersihannya):
+    rm -rf venv
+
+  3. Buat virtual environment baru & Aktifkan:
+    python3 -m venv venv
+    source venv/bin/activate
+    (Pastikan ada tulisan  (venv)  di sebelah kiri prompt Anda)
+  4. Instal seluruh pustaka terbaru:
+    pip install -r requirements.txt
+
+  ──────
+  ### 🗄️ Langkah 3: Inisialisasi Database (Masih di Terminal 2)
+
+  Karena PostgreSQL sekarang baru di-reset, jalankan perintah ini untuk membuat tabel otomatis.
+    python3 create_db.py
+
+  Output yang diharapkan:
+   Database 'auto_video_editor' created successfully!
+   Creating database tables... Done!
+  ──────
+  ### 🚀 Langkah 4: Menghidupkan Sistem Utama (Butuh 3 Tab Terminal)
+
+  Semua perintah ini harus dijalankan di dalam folder  backend  dan setelah menjalankan  source venv/bin/activate .
+
+  A. API Server (Di Terminal 2 yang sama):
+
+    uvicorn app.main:app --reload --port 8000
+
+  B. Celery Worker (Buka Terminal 3):
+
+    cd backend
+    source venv/bin/activate
+    celery -A app.celery_app worker --loglevel=info
+
+
+    cd backend
+    source venv/bin/activate
+  C. Folder Watcher (Buka Terminal 4):
+    python3 app/watcher.py
+    ──────
+  ### 🎨 Langkah 5: Menjalankan Dashboard Frontend (Terminal 5)
+  Buka tab terminal terakhir, kita akan menjalankan antarmuka UI.
+
+    cd frontend
+    rm -rf node_modules package-lock.json   # Opsional: Membersihkan sisa root
+    npm install
+    npm run dev
+
+  Selesai! Anda tinggal membuka browser di  http://localhost:5173/ , masuk ke menu Global Settings, masukkan API Key Anda, lalu coba daftarkan video.
+
+  Ikuti urutan di atas perlahan-lahan dari 0 sampai 5, saya yakin kali ini akan berjalan dengan sangat lancar! Beri tahu saya hasilnya.

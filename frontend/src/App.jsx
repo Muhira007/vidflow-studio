@@ -1,0 +1,94 @@
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Video, 
+  Scissors, 
+  Subtitles, 
+  Image as ImageIcon, 
+  MonitorPlay, 
+  ScrollText,
+  Settings
+} from 'lucide-react';
+
+// Pages
+import DashboardOverview from './pages/DashboardOverview';
+import VideoList from './pages/VideoList';
+import ConfigSilenceCut from './pages/ConfigSilenceCut';
+import ConfigCaption from './pages/ConfigCaption';
+import ConfigCover from './pages/ConfigCover';
+import ConfigRender from './pages/ConfigRender';
+import JobLogs from './pages/JobLogs';
+import GlobalSettings from './pages/GlobalSettings';
+
+function Sidebar() {
+  const location = useLocation();
+
+  const navItems = [
+    { path: '/', label: 'Overview', icon: <LayoutDashboard size={20} /> },
+    { path: '/videos', label: 'Daftar Video', icon: <Video size={20} /> },
+    { path: '/config/silence-cut', label: 'Silence Cut', icon: <Scissors size={20} /> },
+    { path: '/config/caption', label: 'Auto Caption', icon: <Subtitles size={20} /> },
+    { path: '/config/cover', label: 'Auto Cover', icon: <ImageIcon size={20} /> },
+    { path: '/config/render', label: 'Render Settings', icon: <MonitorPlay size={20} /> },
+    { path: '/settings', label: 'Global Settings', icon: <Settings size={20} /> },
+    { path: '/logs', label: 'Log & Riwayat', icon: <ScrollText size={20} /> },
+  ];
+
+  return (
+    <aside className="sidebar">
+      <div className="logo-container">
+        <div className="logo-icon">V</div>
+        <div className="logo-text">AutoVideo Pro</div>
+      </div>
+      
+      <ul className="nav-menu">
+        {navItems.map((item) => (
+          <li className="nav-item" key={item.path}>
+            <Link 
+              to={item.path} 
+              className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <div className="app-container">
+        <Sidebar />
+        
+        <main className="main-content">
+          <header className="top-header">
+            <div style={{ color: 'var(--text-secondary)' }}>Welcome to AutoVideo Pipeline</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span className="badge badge-success">System Online</span>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>A</div>
+            </div>
+          </header>
+          
+          <div className="page-content">
+            <Routes>
+              <Route path="/" element={<DashboardOverview />} />
+              <Route path="/videos" element={<VideoList />} />
+              <Route path="/config/silence-cut" element={<ConfigSilenceCut />} />
+              <Route path="/config/caption" element={<ConfigCaption />} />
+              <Route path="/config/cover" element={<ConfigCover />} />
+              <Route path="/config/render" element={<ConfigRender />} />
+              <Route path="/settings" element={<GlobalSettings />} />
+              <Route path="/logs" element={<JobLogs />} />
+            </Routes>
+          </div>
+        </main>
+      </div>
+    </Router>
+  );
+}
+
+export default App;

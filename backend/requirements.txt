@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+celery
+redis
+sqlalchemy
+psycopg2-binary
+pydantic-settings
+python-multipart
+watchdog
+scenedetect[opencv]
+Pillow
+openai
+deepgram-sdk
+python-dotenv
+ffmpeg-python
