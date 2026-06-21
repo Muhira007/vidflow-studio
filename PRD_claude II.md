@@ -387,10 +387,7 @@ erDiagram
 **Speech-to-Text (untuk Auto Caption)** — diputuskan pakai layanan cloud berbayar karena spek laptop rendah:
 
 | Layanan | Estimasi Harga | Catatan |
-|---|---|---|
-| OpenAI Whisper API / gpt-4o-transcribe | ~$0.006/menit (mini ~$0.003/menit) | Dukungan Bahasa Indonesia matang, ada word-level timestamp |
-| Deepgram Nova-3 | ~$0.0043/menit (pre-recorded) | Dukungan Bahasa Indonesia baru ditambahkan awal 2026 |
-| AssemblyAI | ~$0.0025/menit | Perlu verifikasi cakupan Bahasa Indonesia sebelum dipakai produksi |
+| OpenAI API (`gpt-4o-mini-transcribe`) | ~$0.003/menit | Pilihan eksklusif (Deepgram ditiadakan): Cepat, murah, satu tagihan, ada dukungan word-level timestamp. |
 
 **LLM (opsional, fase lanjutan)** — untuk fitur teks pintar seperti auto-judul cover:
 
@@ -418,10 +415,9 @@ erDiagram
 
 | Komponen | Estimasi Biaya/Bulan |
 |---|---|
-| STT — OpenAI Whisper API | ~$9 |
-| STT — Deepgram Nova-3 (alternatif) | ~$6,5 |
+| STT — OpenAI `gpt-4o-mini-transcribe` | ~$4,5 |
 | LLM opsional (Claude Haiku 4.5, teks pendek per video) | ~$1–3 |
-| **Total estimasi (MVP, tanpa server online)** | **~$10–13/bulan** |
+| **Total estimasi (MVP, tanpa server online)** | **~$5,5–7,5/bulan** |
 
 > Angka di atas murni estimasi berdasar asumsi volume; sesuaikan dengan volume video harian yang sebenarnya. Biaya server/hosting belum termasuk karena fase MVP masih local.
 
