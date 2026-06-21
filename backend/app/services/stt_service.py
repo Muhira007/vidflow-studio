@@ -19,12 +19,13 @@ def transcribe_with_openai(audio_path: str) -> str:
 
 def burn_subtitles_to_video(input_video: str, subtitle_file: str, output_video: str):
     """Burns the subtitle (ASS/SRT) file into the video using FFmpeg"""
-    # ffmpeg -i input.mp4 -vf subtitles=sub.srt output.mp4
+    in_file = ffmpeg.input(input_video)
+    video = in_file.video.filter('subtitles', subtitle_file)
+    audio = in_file.audio
+    
     (
         ffmpeg
-        .input(input_video)
-        .filter('subtitles', subtitle_file)
-        .output(output_video, vcodec='libx264', acodec='copy')
+        .output(video, audio, output_video, vcodec='libx264', acodec='copy')
         .run(overwrite_output=True)
     )
     return output_video

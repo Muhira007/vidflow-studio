@@ -151,11 +151,13 @@ def render_final_video(input_video: str, output_video: str, resolution: str = "1
         scale_w = -2
         scale_h = target_max
 
+    in_file = ffmpeg.input(input_video)
+    video = in_file.video.filter('scale', w=scale_w, h=scale_h)
+    audio = in_file.audio
+
     (
         ffmpeg
-        .input(input_video)
-        .filter('scale', w=scale_w, h=scale_h)
-        .output(output_video, vcodec='libx264', preset='fast', crf=23, acodec='aac')
+        .output(video, audio, output_video, vcodec='libx264', preset='fast', crf=23, acodec='aac')
         .run(overwrite_output=True)
     )
     return output_video
