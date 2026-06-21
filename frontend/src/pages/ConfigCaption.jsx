@@ -10,7 +10,7 @@ export default function ConfigCaption() {
   const [outlineEnabled, setOutlineEnabled] = useState(true);
   const [outlineSize, setOutlineSize] = useState(2);
   const [outlineColor, setOutlineColor] = useState('#000000');
-  const [position, setPosition] = useState(2); // 2: bottom, 10: center, 6: top
+  const [position, setPosition] = useState(15); // Percentage 0 to 100
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -117,12 +117,13 @@ export default function ConfigCaption() {
         )}
 
         <div className="form-group" style={{ gridColumn: outlineEnabled ? 'span 2' : 'auto' }}>
-          <label className="form-label">Posisi Caption</label>
-          <select className="form-control" value={position} onChange={e => setPosition(parseInt(e.target.value))} style={{ maxWidth: '380px' }}>
-            <option value={2}>Tengah Bawah</option>
-            <option value={10}>Tengah (Center)</option>
-            <option value={6}>Tengah Atas</option>
-          </select>
+          <label className="form-label">Posisi Vertikal Caption</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Bawah</span>
+            <input type="range" min="0" max="100" value={position} onChange={e => setPosition(parseInt(e.target.value))} style={{ flex: 1 }} />
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Atas</span>
+            <span style={{ minWidth: '45px', textAlign: 'right', fontWeight: 'bold' }}>{position}%</span>
+          </div>
         </div>
 
         <div style={{ gridColumn: 'span 2', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-light)', paddingTop: '24px' }}>

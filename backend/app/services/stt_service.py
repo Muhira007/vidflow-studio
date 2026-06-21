@@ -38,15 +38,26 @@ def burn_subtitles_to_video(input_video: str, subtitle_file: str, output_video: 
             return f"&H00{h[4:6]}{h[2:4]}{h[0:2]}"
         return "&H00FFFFFF"
         
+    # Ambil resolusi video untuk menghitung MarginV
+    probe = ffmpeg.probe(input_video)
+    video_stream = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+    video_height = int(video_stream.get('height', 1080))
+
     font_color = hex_to_ass(settings.get("caption_color", "#FFFFFF"))
     outline_color = hex_to_ass(settings.get("caption_outline", "#000000"))
-    alignment = settings.get("caption_position", 2)
+    
+    # Position (0-100)
+    position_percent = settings.get("caption_position", 15)
+    # Gunakan Alignment=2 (Bottom Center) dan dorong ke atas menggunakan MarginV
+    margin_v = int((position_percent / 100.0) * video_height)
+    # Beri jarak aman agar teks tidak terpotong di atas
+    margin_v = min(margin_v, video_height - int(font_size * 1.5))
     
     outline_enabled = settings.get("caption_outline_enabled", True)
     outline_size = settings.get("caption_outline_size", 2)
     final_outline = outline_size if outline_enabled else 0
     
-    force_style = f"Fontname={font_name},Fontsize={font_size},PrimaryColour={font_color},OutlineColour={outline_color},Alignment={alignment},Outline={final_outline},Shadow=1"
+    force_style = f"Fontname={font_name},Fontsize={font_size},PrimaryColour={font_color},OutlineColour={outline_color},Alignment=2,MarginV={margin_v},Outline={final_outline},Shadow=1"
 
     in_file = ffmpeg.input(input_video)
     video = in_file.video.filter('subtitles', subtitle_file, force_style=force_style)
