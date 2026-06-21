@@ -252,19 +252,64 @@ graph TD
 
 ## 10. Alur Pemrosesan Video (Pipeline)
 
-*(Diagram telah diubah menjadi format text/Mermaid)*
+```mermaid
+graph TD
+    A[Video baru diletakkan di Folder Source] -->|Watcher.py| B(FastAPI: Status PENDING)
+    B -->|Trigger Celery Task| C((Redis Message Broker))
+    C -->|Worker 1..N| D{Pipeline Engine}
+    D -->|Tahap 1| E[Silence Cut / Deteksi Hening]
+    E -->|Tahap 2| F[Transkripsi AI & Caption]
+    F -->|Tahap 3| G[Generate Cover Video]
+    G -->|Tahap 4| H[Render Akhir / Export]
+    H -->|Sukses| I(FastAPI: Status COMPLETED)
+    D -.->|Gagal| J(FastAPI: Status FAILED)
+```
 
 ---
 
 ## 11. Job State Machine
 
-*(Diagram telah diubah menjadi format text/Mermaid)*
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING : Didaftarkan oleh Watcher
+    PENDING --> PROCESSING : Diambil oleh Celery Worker
+    PROCESSING --> COMPLETED : Semua tahap berhasil
+    PROCESSING --> FAILED : Error pada salah satu tahap
+    PENDING --> INVALID : Format video tidak didukung
+    FAILED --> PROCESSING : Admin melakukan Retry
+    COMPLETED --> [*]
+    INVALID --> [*]
+```
 
 ---
 
 ## 12. Skema Database
 
-*(Diagram telah diubah menjadi format text/Mermaid)*
+```mermaid
+erDiagram
+    VIDEOS ||--o{ JOB_LOGS : "memiliki"
+    
+    VIDEOS {
+        string id PK "Nama unik folder video"
+        string status "PENDING, PROCESSING, dll"
+        int silence_cut_level
+        float silence_threshold
+        string caption_font
+        string cover_template
+        string resolution
+        datetime created_at
+        datetime updated_at
+    }
+    
+    JOB_LOGS {
+        int id PK
+        string video_id FK "Referensi ke VIDEOS.id"
+        string step "Tahapan: silence_cut, caption, dll"
+        string status "running, success, failed"
+        string message "Pesan error atau info"
+        datetime created_at
+    }
+```
 
 ---
 
