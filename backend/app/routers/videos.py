@@ -30,12 +30,42 @@ def process_video(video_id: str, db: Session = Depends(get_db)):
     task = process_video_pipeline.delay(video_id)
     return {"message": f"Processing started for video {video_id}", "task_id": task.id}
 
+import json
 import os
+
+SETTINGS_FILE = "/home/kangdemuh/aplikasi/video-editor/claude2/backend/app/global_settings.json"
+
+def get_global_settings():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, "r") as f:
+            return json.load(f)
+    return {"resolution": "1080p"}
+
+@router.get("/settings/render")
+def read_settings():
+    return get_global_settings()
+
+@router.post("/settings/render")
+def update_settings(settings: dict, db: Session = Depends(get_db)):
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(settings, f)
+        
+    res = settings.get("resolution")
+    if res:
+        # Update all pending videos to use the new resolution
+        db.query(Video).filter(Video.status == "PENDING").update({"resolution": res})
+        db.commit()
+        
+    return {"message": "Settings updated"}
+
 @router.post("/sync")
 def sync_videos(db: Session = Depends(get_db)):
     source_dir = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
     if not os.path.exists(source_dir):
         return {"message": "Source directory does not exist", "added": 0}
+        
+    settings = get_global_settings()
+    res = settings.get("resolution", "1080p")
         
     added = 0
     for item in os.listdir(source_dir):
@@ -52,7 +82,7 @@ def sync_videos(db: Session = Depends(get_db)):
                     min_silence_duration=0.5,
                     silence_padding=150,
                     cover_template="default",
-                    resolution="1080p"
+                    resolution=res
                 )
                 db.add(new_vid)
                 added += 1

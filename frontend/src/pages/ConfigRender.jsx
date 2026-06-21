@@ -1,6 +1,39 @@
+import { useState, useEffect } from 'react';
 import { Save, AlertTriangle } from 'lucide-react';
+import api from '../api';
 
 export default function ConfigRender() {
+  const [resolution, setResolution] = useState('1080p');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get('/videos/settings/render');
+      if (res.data.resolution) {
+        setResolution(res.data.resolution);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await api.post('/videos/settings/render', { resolution });
+      alert('Pengaturan Render berhasil disimpan! Semua video yang masih berstatus PENDING akan mengikuti resolusi baru ini.');
+    } catch (err) {
+      alert('Gagal menyimpan pengaturan: ' + err.message);
+    }
+  };
+
+  if (loading) return <div>Loading settings...</div>;
+
   return (
     <div style={{ maxWidth: '800px' }}>
       <h1 className="page-title">Render Settings</h1>
@@ -9,10 +42,14 @@ export default function ConfigRender() {
       <div className="card glass-panel grid-cols-2">
         <div className="form-group">
           <label className="form-label">Resolusi Output</label>
-          <select className="form-control" defaultValue="FHD (1080p)">
-            <option>HD (720p)</option>
-            <option>FHD (1080p)</option>
-            <option>4K (2160p)</option>
+          <select 
+            className="form-control" 
+            value={resolution}
+            onChange={(e) => setResolution(e.target.value)}
+          >
+            <option value="720p">HD (720p)</option>
+            <option value="1080p">FHD (1080p)</option>
+            <option value="4K">4K (2160p)</option>
           </select>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
             4K membutuhkan waktu proses lebih lama
@@ -62,7 +99,7 @@ export default function ConfigRender() {
         </div>
 
         <div style={{ gridColumn: 'span 2', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-light)', paddingTop: '24px' }}>
-          <button className="btn btn-primary">
+          <button onClick={handleSave} className="btn btn-primary">
             <Save size={18} /> Simpan Konfigurasi
           </button>
         </div>
