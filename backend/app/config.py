@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     
     # External APIs
     openai_api_key: str | None = None
-    deepgram_api_key: str | None = None
     
     class Config:
         env_file = ".env"
