@@ -126,11 +126,11 @@ def render_final_video(input_video: str, output_video: str, resolution: str = "1
     """Render video final sesuai resolusi yang diinginkan."""
     # Resolusi umum: 720p (1280x720), 1080p (1920x1080), 4k (3840x2160)
     scale_dict = {
-        "720p": "1280:720",
-        "1080p": "1920:1080",
-        "4K": "3840:2160"
+        "720p": "1280x720",
+        "1080p": "1920x1080",
+        "4K": "3840x2160"
     }
-    scale = scale_dict.get(resolution.upper(), "1920:1080")
+    scale = scale_dict.get(resolution.upper(), "1920x1080")
     
     (
         ffmpeg
