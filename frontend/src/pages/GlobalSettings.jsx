@@ -5,7 +5,6 @@ const API_BASE_URL = 'http://localhost:8000/api';
 
 export default function GlobalSettings() {
   const [openaiKey, setOpenaiKey] = useState('');
-  const [deepgramKey, setDeepgramKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
@@ -15,7 +14,6 @@ export default function GlobalSettings() {
       .then(res => res.json())
       .then(data => {
         setOpenaiKey(data.openai_api_key || '');
-        setDeepgramKey(data.deepgram_api_key || '');
       })
       .catch(err => console.error("Error loading settings:", err));
   }, []);
@@ -31,8 +29,7 @@ export default function GlobalSettings() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          openai_api_key: openaiKey,
-          deepgram_api_key: deepgramKey
+          openai_api_key: openaiKey
         })
       });
       
