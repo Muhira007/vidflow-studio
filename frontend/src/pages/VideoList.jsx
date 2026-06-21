@@ -73,26 +73,27 @@ export default function VideoList() {
               {videos.length === 0 ? (
                 <tr><td colSpan="4" style={{textAlign: 'center', padding: '20px'}}>Belum ada video terdaftar.</td></tr>
               ) : videos.map((vid, idx) => {
+                const status = (vid.status || '').toUpperCase();
                 let badgeType = 'warning';
-                if (vid.status === 'COMPLETED') badgeType = 'success';
-                if (vid.status === 'FAILED') badgeType = 'danger';
-                if (vid.status === 'PENDING') badgeType = 'secondary';
+                if (status === 'COMPLETED') badgeType = 'success';
+                if (status === 'FAILED') badgeType = 'danger';
+                if (status === 'PENDING') badgeType = 'secondary';
                 
                 return (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
                     <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>{vid.id}</td>
                     <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{new Date(vid.created_at).toLocaleDateString()}</td>
                     <td style={{ padding: '16px 12px' }}>
-                      <span className={`badge badge-${badgeType}`}>{vid.status}</span>
+                      <span className={`badge badge-${badgeType}`}>{status}</span>
                     </td>
                     <td style={{ padding: '16px 12px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        {vid.status === 'FAILED' && (
+                        {status === 'FAILED' && (
                           <button onClick={() => handleProcess(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Retry">
                             <RotateCcw size={16} />
                           </button>
                         )}
-                        {(vid.status === 'PENDING' || vid.status === 'FAILED') && (
+                        {(status === 'PENDING' || status === 'FAILED') && (
                           <button onClick={() => handleProcess(vid.id)} className="btn btn-primary" style={{ padding: '6px 10px' }} title="Proses">
                             <Play size={16} />
                           </button>
