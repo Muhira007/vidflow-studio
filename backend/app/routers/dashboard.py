@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Video, JobLog
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 router = APIRouter()
 
@@ -33,8 +33,14 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         elif log.status == "success": job_type = "success"
         elif log.status == "failed": job_type = "danger"
         
-        # Calculate time ago (simplified string representation)
-        time_diff = datetime.utcnow() - log.created_at
+        # Calculate time ago
+        # Ensure log.created_at is timezone-aware if the db returns it as naive somehow, or use naive if the db is naive.
+        # SQLAlchemy returns offset-aware datetime for timezone=True in PostgreSQL.
+        created_at = log.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+            
+        time_diff = datetime.now(timezone.utc) - created_at
         minutes = time_diff.total_seconds() // 60
         if minutes < 60:
             time_str = f"{int(minutes)} mins ago"
