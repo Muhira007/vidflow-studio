@@ -10,6 +10,5 @@ watchdog
 scenedetect[opencv]
 Pillow
 openai
-deepgram-sdk
 python-dotenv
 ffmpeg-python

@@ -1,6 +1,6 @@
 # 🎬 Auto Video Editor
 
-Auto Video Editor adalah aplikasi *full-stack* pintar yang dirancang untuk mempermudah dan mengotomatisasi alur kerja pengeditan video. Aplikasi ini mendeteksi video baru, memotong bagian hening secara otomatis (*silence cut*), menghasilkan *subtitle* menggunakan AI (Deepgram/OpenAI), dan menerapkan desain *cover* dinamis.
+Auto Video Editor adalah aplikasi *full-stack* pintar yang dirancang untuk mempermudah dan mengotomatisasi alur kerja pengeditan video. Aplikasi ini mendeteksi video baru, memotong bagian hening secara otomatis (*silence cut*), menghasilkan *subtitle* menggunakan AI (OpenAI), dan menerapkan desain *cover* dinamis.
 
 ## 🏗 Arsitektur Sistem
 

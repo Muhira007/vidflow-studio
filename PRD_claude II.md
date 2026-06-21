@@ -227,7 +227,7 @@ graph TD
     D -->|Celery Worker mengambil task| E{Pemrosesan Pipeline}
     
     E -->|Step 1| F[Silence Cut via PySceneDetect/FFmpeg]
-    F -->|Step 2| G[Auto Caption via Deepgram/OpenAI]
+    F -->|Step 2| G[Auto Caption via OpenAI]
     G -->|Step 3| H[Auto Cover via PIL]
     H -->|Step 4| I[Render Final Video]
     
