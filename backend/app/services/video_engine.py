@@ -64,13 +64,13 @@ def process_silence_cut(input_path: str, output_path: str, level: int = 1, thres
         start_time = 0.0
         end_time = duration
         
-        # Cek hening di awal
-        if silences and silences[0][0] == 0.0:
+        # Cek hening di awal (toleransi 0.5 detik karena ffmpeg sering deteksi mulai dari 0.02s)
+        if silences and silences[0][0] <= 0.5:
             start_time = silences[0][1] - padding
             start_time = max(0.0, start_time)
             
-        # Cek hening di akhir
-        if silences and silences[-1][1] >= duration - min_duration:
+        # Cek hening di akhir (toleransi 0.5 detik)
+        if silences and silences[-1][1] >= duration - 0.5:
             end_time = silences[-1][0] + padding
             end_time = min(duration, end_time)
             
