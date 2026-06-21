@@ -60,3 +60,29 @@ def sync_videos(db: Session = Depends(get_db)):
     if added > 0:
         db.commit()
     return {"message": f"Synced successfully", "added": added}
+
+import shutil
+@router.delete("/{video_id}")
+def delete_video(video_id: str, db: Session = Depends(get_db)):
+    video = db.query(Video).filter(Video.id == video_id).first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+        
+    # Delete associated job logs first due to foreign key
+    db.query(JobLog).filter(JobLog.video_id == video_id).delete()
+    
+    # Delete the video from DB
+    db.delete(video)
+    db.commit()
+    
+    # Delete physical folders
+    base_dir = "/home/kangdemuh/aplikasi/video-editor/claude2"
+    for folder in ["source", "tmp", "output"]:
+        target_dir = os.path.join(base_dir, folder, video_id)
+        if os.path.exists(target_dir):
+            try:
+                shutil.rmtree(target_dir)
+            except Exception as e:
+                print(f"Failed to delete {target_dir}: {e}")
+                
+    return {"message": f"Video {video_id} and its folders have been deleted."}

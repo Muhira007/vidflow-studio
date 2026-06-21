@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Filter, Play, RotateCcw, MoreHorizontal } from 'lucide-react';
+import { Filter, Play, RotateCcw, MoreHorizontal, Trash2 } from 'lucide-react';
 import api from '../api';
 
 export default function VideoList() {
@@ -40,6 +40,16 @@ export default function VideoList() {
       fetchVideos();
     } catch (error) {
       alert('Gagal sinkronisasi: ' + error.message);
+    }
+  };
+
+  const handleDelete = async (videoId) => {
+    if (!window.confirm(`Yakin ingin menghapus video ${videoId} beserta seluruh foldernya?`)) return;
+    try {
+      await api.delete(`/videos/${videoId}`);
+      fetchVideos();
+    } catch (error) {
+      alert('Gagal menghapus video: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -113,6 +123,9 @@ export default function VideoList() {
                         )}
                         <button className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Detail">
                           <MoreHorizontal size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(vid.id)} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus">
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
