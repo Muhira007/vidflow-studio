@@ -10,12 +10,16 @@ import {
   ScrollText,
   Settings,
   Menu,
-  X
+  X,
+  UploadCloud,
+  Folder
 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
 // Pages
 import DashboardOverview from './pages/DashboardOverview';
+import FileManager from './pages/FileManager';
+import ErrorBoundary from './ErrorBoundary';
 import VideoList from './pages/VideoList';
 import ConfigSilenceCut from './pages/ConfigSilenceCut';
 import ConfigCaption from './pages/ConfigCaption';
@@ -29,6 +33,7 @@ function Sidebar({ isOpen, setIsOpen }) {
 
   const navItems = [
     { path: '/', label: 'Overview', icon: <LayoutDashboard size={20} /> },
+    { path: '/explorer', label: 'File Explorer', icon: <Folder size={20} /> },
     { path: '/videos', label: 'Daftar Video', icon: <Video size={20} /> },
     { path: '/config/silence-cut', label: 'Silence Cut', icon: <Scissors size={20} /> },
     { path: '/config/caption', label: 'Auto Caption', icon: <Subtitles size={20} /> },
@@ -104,6 +109,7 @@ function App() {
           <div className="page-content">
             <Routes>
               <Route path="/" element={<DashboardOverview />} />
+              <Route path="/explorer" element={<ErrorBoundary><FileManager /></ErrorBoundary>} />
               <Route path="/videos" element={<VideoList />} />
               <Route path="/config/silence-cut" element={<ConfigSilenceCut />} />
               <Route path="/config/caption" element={<ConfigCaption />} />

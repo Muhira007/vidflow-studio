@@ -111,7 +111,12 @@ def process_video_pipeline(self, video_id: str):
         db.commit()
         
         final_video_path = os.path.join(output_folder, f"{video_id}_{video.resolution}.mp4")
-        render_final_video(captioned_output, final_video_path, resolution=video.resolution)
+        render_final_video(
+            input_video=captioned_output, 
+            output_video=final_video_path, 
+            resolution=video.resolution, 
+            cover_image_path=final_cover_path
+        )
         
         log.status = "success"
         db.commit()

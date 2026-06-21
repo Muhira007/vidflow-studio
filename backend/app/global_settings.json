@@ -1,0 +1,1 @@
+{"resolution": "1080p", "silence_cut_level": 1, "silence_threshold": -30, "min_silence_duration": 0.5, "silence_padding": 150, "cover_template": "tpl_1", "caption_font": "DejaVu Sans", "caption_size": 10, "caption_color": "#fbff00", "caption_outline": "#000000", "caption_position": 35, "caption_outline_enabled": true, "caption_outline_size": 1}

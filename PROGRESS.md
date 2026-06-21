@@ -3,8 +3,8 @@
 Dokumen ini melacak status pengembangan aplikasi **Auto Video Editor** berdasarkan PRD (*Product Requirements Document*).
 
 ## 📊 Status Keseluruhan
-- **Fase Saat Ini:** Fase 1 (Core Pipeline & Silence Cut) - **Selesai (Backend Foundation)**
-- **Fase Berikutnya:** Fase 2 (Auto Caption & Cover Generation)
+- **Fase Saat Ini:** Fase 4 & 5 (Render Multi-resolusi & Testing E2E Lokal) - **Selesai (MVP Lokal Siap)**
+- **Fase Berikutnya:** Fase 6 (Migrasi Server Online)
 
 ---
 
@@ -21,11 +21,16 @@ Dokumen ini melacak status pengembangan aplikasi **Auto Video Editor** berdasark
 
 ---
 
+- [x] *Image generation* untuk cover video dinamis menggunakan PIL (Selesai, 4 template diimplementasikan).
+- [x] Render multi-resolusi (720p, 1080p, 4K) dengan *aspect-ratio aware scaling* terintegrasi.
+- [x] End-to-end integration test (`test_pipeline.py`) berjalan sukses dari Database -> API -> Celery Pipeline.
+- [x] Pembuatan In-Browser File Explorer: Drag & drop, Context Menu, Multi-select, sinkronisasi otomatis ke Database, desain UI solid dan kompatibilitas sentuh (Mobile friendly).
+- [x] Integrasi Background Daemon Lokal: Pembuatan skrip `start.sh` dan `stop.sh` untuk menjalankan seluruh service secara terpusat tanpa banyak jendela terminal.
+
+---
+
 ## 🏗️ Dalam Pengerjaan (WIP) / Tertunda
-- [x] Implementasi UI Dashboard Frontend agar sepenuhnya tersambung dengan API Backend (Selesai dengan dukungan responsive hamburger menu, modal interaktif, dan react-hot-toast).
-- [x] Pengujian modul FFmpeg `silencedetect` secara nyata dengan file video berat (Bug deteksi awal video pada Level 1 sudah diperbaiki).
-- [x] Pembuatan fungsi *burn-in* subtitle ke dalam video menggunakan FFmpeg (Selesai, fitur Auto Caption sudah fully functional dengan kustomisasi font Linux, ukuran font, persentase posisi, dan ketebalan outline menggunakan sistem Virtual Canvas ASS 288px).
-- [ ] *Image generation* untuk cover video dinamis menggunakan PIL (Sedang Berjalan).
+- [ ] Persiapan environment untuk migrasi VPS / Cloud Server Online (Fase 6).
 
 ---
 
@@ -35,7 +40,7 @@ Berikut adalah diagram arsitektur dan alur pemrosesan video dari hulu ke hilir:
 
 ```mermaid
 graph TD
-    A[Admin meletakkan video di folder] -->|Dideteksi oleh watcher.py| B(FastAPI Backend)
+    A[Admin membuat folder & upload video via File Explorer] -->|Diunggah & Disinkronisasi| B(FastAPI Backend)
     B -->|Mendaftarkan status PENDING| C[(PostgreSQL Database)]
     B -->|Mengirim Task via Broker| D((Redis Queue))
     D -->|Celery Worker mengambil task| E{Pemrosesan Pipeline}

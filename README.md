@@ -52,30 +52,19 @@ python3 create_db.py
 
 ## 🎮 Cara Menjalankan Aplikasi
 
-Aplikasi ini membutuhkan **3 terminal** terpisah agar semua layanannya dapat berjalan bersamaan.
+Kini Anda dapat menjalankan seluruh aplikasi dengan satu perintah tanpa harus membuka banyak jendela terminal.
 
-### Terminal 1: Backend API Server
-Bertugas melayani antarmuka web dan menyimpan data konfigurasi.
+### Menyalakan Aplikasi
+Buka terminal di root direktori proyek, lalu jalankan:
 ```bash
-cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload --port 8000
+./start.sh
 ```
+*Script ini akan otomatis menjalankan Database (Docker), Backend FastAPI, Celery Worker, dan Frontend Vite di background.*
 
-### Terminal 2: Celery Worker
-Bertugas mengeksekusi operasi berat seperti memotong video (FFmpeg) dan Transkripsi AI.
+### Mematikan Aplikasi
+Jika sudah selesai bekerja, hentikan seluruh layanan dengan perintah:
 ```bash
-cd backend
-source venv/bin/activate
-celery -A app.celery_app worker --loglevel=info
-```
-
-### Terminal 3: Frontend Dashboard
-Bertugas menampilkan UI (User Interface) di browser Anda.
-```bash
-cd frontend
-npm install
-npm run dev
+./stop.sh
 ```
 
 ---
@@ -85,9 +74,9 @@ npm run dev
 1. **Buka Dashboard UI:** Buka browser dan akses URL `http://localhost:5173/`.
 2. **Konfigurasi AI:** Masuk ke menu **Global Settings** di sebelah kiri. Masukkan *API Key* Anda (OpenAI) untuk keperluan pengenalan suara otomatis (*Auto Caption*), lalu simpan.
 3. **Daftarkan Video:**
-   - Secara bawaan, Anda dapat menggunakan script `python3 app/watcher.py` untuk memantau folder `source/`.
-   - Cukup buat sub-folder baru di dalam `source/` dan letakkan file `.mp4` Anda di sana.
-   - Sistem akan otomatis mendeteksinya, mendaftarkannya ke dalam *database*, dan menampilkan video tersebut di halaman muka Dashboard.
+   - Masuk ke menu **File Explorer** dari panel kiri.
+   - Klik kanan untuk membuat folder baru (sebagai ID Video), dan klik **Upload File di Sini** untuk mengunggah `.mp4` ke dalam folder.
+   - Sistem akan otomatis mendeteksinya, mendaftarkannya ke dalam *database*, dan menampilkannya di dashboard.
 4. **Mulai Pemrosesan:** Klik tombol **Process** atau atur level *Silence Cut* dan konfigurasi lain langsung melalui Dashboard web Anda.
 5. **Pantau Proses:** Celery akan mengeksekusi tugas tersebut di latar belakang dan status akan diperbarui secara *real-time* di layar Anda.
 

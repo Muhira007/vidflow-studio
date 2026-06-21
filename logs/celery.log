@@ -1,0 +1,23 @@
+ 
+ -------------- celery@DESKTOP-6BLMIQA v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- Linux-6.18.33.1-microsoft-standard-WSL2-x86_64-with-glibc2.43 2026-06-22 06:42:23
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         auto_video_editor:0x7c110cac81a0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 8 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . app.tasks.process_video_pipeline
+
+[2026-06-22 06:42:24,394: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-06-22 06:42:24,398: INFO/MainProcess] mingle: searching for neighbors
+[2026-06-22 06:42:25,409: INFO/MainProcess] mingle: all alone
+[2026-06-22 06:42:25,545: INFO/MainProcess] celery@DESKTOP-6BLMIQA ready.

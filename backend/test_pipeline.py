@@ -67,7 +67,7 @@ def test_pipeline_flow():
     print(f"👉 Simulating Watcher: Inserting Video ID '{video_id}' into database...")
     cursor.execute("""
         INSERT INTO videos (id, status)
-        VALUES (%s, 'pending')
+        VALUES (%s, 'PENDING')
     """, (video_id,))
     conn.commit()
     print("✅ Video inserted successfully.")

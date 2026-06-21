@@ -221,7 +221,7 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 
 ```mermaid
 graph TD
-    A[Admin meletakkan video di folder] -->|Dideteksi oleh watcher.py| B(FastAPI Backend)
+    A[Admin membuat folder & upload video via File Explorer] -->|Diunggah & Disinkronisasi| B(FastAPI Backend)
     B -->|Mendaftarkan status PENDING| C[(PostgreSQL Database)]
     B -->|Mengirim Task via Broker| D((Redis Queue))
     D -->|Celery Worker mengambil task| E{Pemrosesan Pipeline}
@@ -254,7 +254,7 @@ graph TD
 
 ```mermaid
 graph TD
-    A[Video baru diletakkan di Folder Source] -->|Watcher.py| B(FastAPI: Status PENDING)
+    A[Video baru diupload via File Explorer] -->|Disinkronisasi| B(FastAPI: Status PENDING)
     B -->|Trigger Celery Task| C((Redis Message Broker))
     C -->|Worker 1..N| D{Pipeline Engine}
     D -->|Tahap 1| E[Silence Cut / Deteksi Hening]
@@ -336,6 +336,12 @@ erDiagram
 **Overview/Dashboard**
 - Card ringkasan: total video, job aktif, job gagal hari ini, job selesai hari ini
 - Tabel job terbaru: ID video, step saat ini, status, waktu mulai
+
+**File Explorer (Manajemen Sumber)**
+- GUI mirip Google Drive / Windows Explorer terintegrasi di dalam browser.
+- Mendukung Drag & Drop, klik kanan (Context Menu solid background), seleksi multiple (CTRL+klik), dan double-click untuk membuka folder.
+- Dukungan interaksi *mobile/smartphone* (opsi checkbox & tombol tiga titik untuk touch interface).
+- Fungsi CRUD (Create, Rename, Delete, Upload file) langsung dari UI tanpa harus membuka folder laptop.
 
 **Daftar Video**
 - Tabel: ID (nama folder), status tiap step (ikon), durasi asli vs setelah cut, tombol aksi (Proses / Retry / Detail)

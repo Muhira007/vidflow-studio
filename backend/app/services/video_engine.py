@@ -122,8 +122,8 @@ def extract_audio(input_video: str, output_audio: str):
     )
     return output_audio
 
-def render_final_video(input_video: str, output_video: str, resolution: str = "1080p"):
-    """Render video final secara dinamis dengan mempertahankan aspect ratio."""
+def render_final_video(input_video: str, output_video: str, resolution: str = "1080p", cover_image_path: str = None):
+    """Render video final secara dinamis dengan mempertahankan aspect ratio dan menyisipkan cover di frame awal."""
     # Ambil info resolusi asli
     probe = ffmpeg.probe(input_video)
     video_stream = next(s for s in probe['streams'] if s['codec_type'] == 'video')
@@ -154,6 +154,11 @@ def render_final_video(input_video: str, output_video: str, resolution: str = "1
     in_file = ffmpeg.input(input_video)
     video = in_file.video.filter('scale', w=scale_w, h=scale_h)
     audio = in_file.audio
+
+    if cover_image_path and os.path.exists(cover_image_path):
+        cover = ffmpeg.input(cover_image_path).filter('scale', w=scale_w, h=scale_h)
+        # Overlay cover on video for the first 0.1 seconds (approx 3 frames at 30fps)
+        video = ffmpeg.overlay(video, cover, enable='between(t,0,0.1)')
 
     (
         ffmpeg

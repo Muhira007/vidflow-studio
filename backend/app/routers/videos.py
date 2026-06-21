@@ -135,6 +135,8 @@ def sync_videos(db: Session = Depends(get_db)):
     return {"message": f"Synced successfully", "added": added}
 
 import shutil
+from fastapi import File, UploadFile, Form
+
 @router.delete("/{video_id}")
 def delete_video(video_id: str, db: Session = Depends(get_db)):
     video = db.query(Video).filter(Video.id == video_id).first()
@@ -159,3 +161,43 @@ def delete_video(video_id: str, db: Session = Depends(get_db)):
                 print(f"Failed to delete {target_dir}: {e}")
                 
     return {"message": f"Video {video_id} and its folders have been deleted."}
+
+@router.post("/upload")
+async def upload_video(video_id: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
+    base_dir = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
+    target_dir = os.path.join(base_dir, video_id)
+    
+    # Create folder if it doesn't exist
+    os.makedirs(target_dir, exist_ok=True)
+    
+    # Save file
+    file_location = os.path.join(target_dir, file.filename)
+    with open(file_location, "wb+") as file_object:
+        shutil.copyfileobj(file.file, file_object)
+        
+    # Check if video already in db
+    existing = db.query(Video).filter(Video.id == video_id).first()
+    if not existing:
+        settings = get_global_settings()
+        res = settings.get("resolution", "1080p")
+        cut_level = settings.get("silence_cut_level", 2)
+        threshold = settings.get("silence_threshold", -30.0)
+        min_dur = settings.get("min_silence_duration", 0.5)
+        padding = settings.get("silence_padding", 150)
+        cover_template = settings.get("cover_template", "default")
+
+        new_vid = Video(
+            id=video_id,
+            status="PENDING",
+            silence_cut_level=cut_level,
+            silence_threshold=threshold,
+            min_silence_duration=min_dur,
+            silence_padding=padding,
+            cover_template=cover_template,
+            resolution=res
+        )
+        db.add(new_vid)
+        db.commit()
+        
+    return {"message": "Video uploaded successfully", "video_id": video_id}
+
