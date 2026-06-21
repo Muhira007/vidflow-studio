@@ -58,9 +58,19 @@ function Sidebar() {
   );
 }
 
+import { Toaster } from 'react-hot-toast';
+
 function App() {
   return (
     <Router>
+      <Toaster position="top-right" toastOptions={{
+        style: {
+          background: 'rgba(30, 41, 59, 0.9)',
+          color: '#fff',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        }
+      }} />
       <div className="app-container">
         <Sidebar />
         

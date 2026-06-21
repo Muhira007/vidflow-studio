@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Upload } from 'lucide-react';
 import api from '../api';
+import toast from 'react-hot-toast';
 
 export default function ConfigCover() {
   const [activeTemplate, setActiveTemplate] = useState('tpl_1');
@@ -35,9 +36,9 @@ export default function ConfigCover() {
       await api.post('/videos/settings/cover', {
         cover_template: activeTemplate
       });
-      alert('Pengaturan Cover berhasil disimpan!');
+      toast.success('Pengaturan Cover berhasil disimpan!');
     } catch (err) {
-      alert('Gagal menyimpan pengaturan: ' + err.message);
+      toast.error('Gagal menyimpan pengaturan: ' + err.message);
     }
   };
 

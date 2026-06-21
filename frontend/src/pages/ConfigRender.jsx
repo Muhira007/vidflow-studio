@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, AlertTriangle } from 'lucide-react';
 import api from '../api';
+import toast from 'react-hot-toast';
 
 export default function ConfigRender() {
   const [resolution, setResolution] = useState('1080p');
@@ -26,9 +27,9 @@ export default function ConfigRender() {
   const handleSave = async () => {
     try {
       await api.post('/videos/settings/render', { resolution });
-      alert('Pengaturan Render berhasil disimpan! Semua video yang masih berstatus PENDING akan mengikuti resolusi baru ini.');
+      toast.success('Pengaturan Render berhasil disimpan! Semua video yang masih berstatus PENDING akan mengikuti resolusi baru ini.');
     } catch (err) {
-      alert('Gagal menyimpan pengaturan: ' + err.message);
+      toast.error('Gagal menyimpan pengaturan: ' + err.message);
     }
   };
 

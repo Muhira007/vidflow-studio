@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 import api from '../api';
+import toast from 'react-hot-toast';
 
 export default function ConfigSilenceCut() {
   const [level, setLevel] = useState('Level 2');
@@ -44,9 +45,9 @@ export default function ConfigSilenceCut() {
         min_silence_duration: parseFloat(minDuration),
         silence_padding: parseInt(padding)
       });
-      alert('Pengaturan Silence Cut berhasil disimpan!');
+      toast.success('Pengaturan Silence Cut berhasil disimpan!');
     } catch (err) {
-      alert('Gagal menyimpan pengaturan: ' + err.message);
+      toast.error('Gagal menyimpan pengaturan: ' + err.message);
     }
   };
 

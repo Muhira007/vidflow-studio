@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 import api from '../api';
+import toast from 'react-hot-toast';
 
 export default function ConfigCaption() {
   const [fontName, setFontName] = useState('Arial');
@@ -38,9 +39,9 @@ export default function ConfigCaption() {
         caption_outline: outlineColor,
         caption_position: position
       });
-      alert('Pengaturan Caption berhasil disimpan!');
+      toast.success('Pengaturan Caption berhasil disimpan!');
     } catch (err) {
-      alert('Gagal menyimpan pengaturan: ' + err.message);
+      toast.error('Gagal menyimpan pengaturan: ' + err.message);
     }
   };
 

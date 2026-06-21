@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Filter, Play, RotateCcw, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Filter, Play, RotateCcw, MoreHorizontal, Trash2, FolderSync } from 'lucide-react';
 import api from '../api';
+import toast from 'react-hot-toast';
 
 export default function VideoList() {
   const [videos, setVideos] = useState([]);
@@ -26,30 +27,31 @@ export default function VideoList() {
   const handleProcess = async (videoId) => {
     try {
       await api.post(`/videos/${videoId}/process`);
-      alert('Proses dimulai untuk video: ' + videoId);
+      toast.success('Proses dimulai untuk video: ' + videoId);
       fetchVideos();
     } catch (error) {
-      alert('Gagal memulai proses: ' + (error.response?.data?.detail || error.message));
+      toast.error('Gagal memulai proses: ' + (error.response?.data?.detail || error.message));
     }
   };
 
   const handleSync = async () => {
     try {
       const res = await api.post('/videos/sync');
-      alert(`Sinkronisasi berhasil! ${res.data.added} video baru ditambahkan ke database.`);
+      toast.success(`Sinkronisasi berhasil! ${res.data.added} video baru ditambahkan ke database.`);
       fetchVideos();
     } catch (error) {
-      alert('Gagal sinkronisasi: ' + error.message);
+      toast.error('Gagal sinkronisasi: ' + error.message);
     }
   };
 
   const handleDelete = async (videoId) => {
-    if (!window.confirm(`Yakin ingin menghapus video ${videoId} beserta seluruh foldernya?`)) return;
+    if (!window.confirm(`Yakin ingin menghapus secara HARD DELETE video ${videoId} dari database dan foldernya?`)) return;
     try {
       await api.delete(`/videos/${videoId}`);
+      toast.success('Video berhasil dihapus!');
       fetchVideos();
     } catch (error) {
-      alert('Gagal menghapus video: ' + (error.response?.data?.detail || error.message));
+      toast.error('Gagal menghapus video: ' + (error.response?.data?.detail || error.message));
     }
   };
 
