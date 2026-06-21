@@ -11,7 +11,7 @@ def transcribe_with_openai(audio_path: str) -> str:
     client = OpenAI(api_key=settings.openai_api_key)
     with open(audio_path, "rb") as audio_file:
         transcription = client.audio.transcriptions.create(
-            model="gpt-4o-mini-transcribe",
+            model="whisper-1",
             file=audio_file,
             response_format="srt"
         )
