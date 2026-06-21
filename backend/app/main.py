@@ -21,6 +21,7 @@ def read_root():
     return {"message": "Welcome to Auto Video Editor API"}
 
 # Include routers
-from app.routers import videos, settings
+from app.routers import videos, settings, dashboard
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(videos.router, prefix="/api/videos", tags=["Videos"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
