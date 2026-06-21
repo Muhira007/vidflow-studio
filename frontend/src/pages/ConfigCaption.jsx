@@ -1,9 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
+import api from '../api';
 
 export default function ConfigCaption() {
-  const [highlightWord, setHighlightWord] = useState(true);
-  
+  const [fontName, setFontName] = useState('Arial');
+  const [fontSize, setFontSize] = useState(24);
+  const [fontColor, setFontColor] = useState('#ffffff');
+  const [outlineColor, setOutlineColor] = useState('#000000');
+  const [position, setPosition] = useState(2); // 2: bottom, 5: center, 8: top
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get('/videos/settings/caption');
+      if (res.data.caption_font) setFontName(res.data.caption_font);
+      if (res.data.caption_size) setFontSize(res.data.caption_size);
+      if (res.data.caption_color) setFontColor(res.data.caption_color);
+      if (res.data.caption_outline) setOutlineColor(res.data.caption_outline);
+      if (res.data.caption_position) setPosition(res.data.caption_position);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await api.post('/videos/settings/caption', { 
+        caption_font: fontName,
+        caption_size: fontSize,
+        caption_color: fontColor,
+        caption_outline: outlineColor,
+        caption_position: position
+      });
+      alert('Pengaturan Caption berhasil disimpan!');
+    } catch (err) {
+      alert('Gagal menyimpan pengaturan: ' + err.message);
+    }
+  };
+
+  if (loading) return <div>Loading settings...</div>;
+
   return (
     <div style={{ maxWidth: '800px' }}>
       <h1 className="page-title">Auto Caption Configuration</h1>
@@ -12,72 +54,51 @@ export default function ConfigCaption() {
       <div className="card glass-panel grid-cols-2">
         <div className="form-group">
           <label className="form-label">Jenis Font</label>
-          <select className="form-control">
-            <option>Montserrat</option>
-            <option>Inter</option>
-            <option>Bebas Neue</option>
-            <option>Arial Black</option>
-            <option>Comic Sans MS</option>
+          <select className="form-control" value={fontName} onChange={e => setFontName(e.target.value)}>
+            <option value="Arial">Arial</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Inter">Inter</option>
+            <option value="Bebas Neue">Bebas Neue</option>
+            <option value="Arial Black">Arial Black</option>
+            <option value="Comic Sans MS">Comic Sans MS</option>
           </select>
         </div>
 
         <div className="form-group">
           <label className="form-label">Ukuran Font</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <input type="range" min="12" max="72" defaultValue="32" style={{ flex: 1 }} />
-            <span style={{ minWidth: '40px', textAlign: 'right', fontWeight: 'bold' }}>32px</span>
+            <input type="range" min="12" max="72" value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} style={{ flex: 1 }} />
+            <span style={{ minWidth: '40px', textAlign: 'right', fontWeight: 'bold' }}>{fontSize}px</span>
           </div>
         </div>
 
         <div className="form-group">
           <label className="form-label">Warna Teks</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <input type="color" defaultValue="#ffffff" style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} />
-            <span style={{ fontFamily: 'monospace' }}>#FFFFFF</span>
+            <input type="color" value={fontColor} onChange={e => setFontColor(e.target.value)} style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} />
+            <span style={{ fontFamily: 'monospace' }}>{fontColor.toUpperCase()}</span>
           </div>
         </div>
 
         <div className="form-group">
           <label className="form-label">Warna Outline (Stroke)</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <input type="color" defaultValue="#000000" style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} />
-            <span style={{ fontFamily: 'monospace' }}>#000000</span>
+            <input type="color" value={outlineColor} onChange={e => setOutlineColor(e.target.value)} style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} />
+            <span style={{ fontFamily: 'monospace' }}>{outlineColor.toUpperCase()}</span>
           </div>
         </div>
 
         <div className="form-group">
           <label className="form-label">Posisi Caption</label>
-          <select className="form-control">
-            <option>Tengah Bawah</option>
-            <option>Tengah Atas</option>
-            <option>Tengah (Center)</option>
-            <option>Kustom (Offset Y)</option>
+          <select className="form-control" value={position} onChange={e => setPosition(parseInt(e.target.value))}>
+            <option value={2}>Tengah Bawah</option>
+            <option value={8}>Tengah Atas</option>
+            <option value={5}>Tengah (Center)</option>
           </select>
         </div>
 
-        <div className="form-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
-          <div>
-            <label className="form-label" style={{ marginBottom: '4px' }}>Highlight Kata Aktif (Karaoke Style)</label>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mewarnai kata yang sedang diucapkan</div>
-          </div>
-          <label className="switch">
-            <input type="checkbox" checked={highlightWord} onChange={() => setHighlightWord(!highlightWord)} />
-            <span className="slider"></span>
-          </label>
-        </div>
-
-        {highlightWord && (
-          <div className="form-group" style={{ gridColumn: 'span 2' }}>
-            <label className="form-label">Warna Highlight</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input type="color" defaultValue="#fbbf24" style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} />
-              <span style={{ fontFamily: 'monospace' }}>#FBBF24</span>
-            </div>
-          </div>
-        )}
-
         <div style={{ gridColumn: 'span 2', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-light)', paddingTop: '24px' }}>
-          <button className="btn btn-primary">
+          <button onClick={handleSave} className="btn btn-primary">
             <Save size={18} /> Simpan Konfigurasi
           </button>
         </div>

@@ -47,8 +47,10 @@ def read_settings():
 
 @router.post("/settings/render")
 def update_settings(settings: dict, db: Session = Depends(get_db)):
+    current = get_global_settings()
+    current.update(settings)
     with open(SETTINGS_FILE, "w") as f:
-        json.dump(settings, f)
+        json.dump(current, f)
         
     res = settings.get("resolution")
     if res:
@@ -57,6 +59,18 @@ def update_settings(settings: dict, db: Session = Depends(get_db)):
         db.commit()
         
     return {"message": "Settings updated"}
+
+@router.get("/settings/caption")
+def read_caption_settings():
+    return get_global_settings()
+
+@router.post("/settings/caption")
+def update_caption_settings(settings: dict):
+    current = get_global_settings()
+    current.update(settings)
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(current, f)
+    return {"message": "Caption settings updated"}
 
 @router.post("/sync")
 def sync_videos(db: Session = Depends(get_db)):
