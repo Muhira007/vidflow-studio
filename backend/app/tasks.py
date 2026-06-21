@@ -36,7 +36,7 @@ def process_video_pipeline(self, video_id: str):
         input_file = None
         if os.path.exists(source_folder):
             for f in os.listdir(source_folder):
-                if f.endswith(('.mp4', '.mov', '.mkv')):
+                if f.lower().endswith(('.mp4', '.mov', '.mkv', '.avi', '.webm')):
                     input_file = os.path.join(source_folder, f)
                     break
                     
