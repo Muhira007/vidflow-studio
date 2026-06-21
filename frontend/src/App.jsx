@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { 
   LayoutDashboard, 
   Video, 
@@ -7,8 +8,11 @@ import {
   Image as ImageIcon, 
   MonitorPlay, 
   ScrollText,
-  Settings
+  Settings,
+  Menu,
+  X
 } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
 // Pages
 import DashboardOverview from './pages/DashboardOverview';
@@ -20,7 +24,7 @@ import ConfigRender from './pages/ConfigRender';
 import JobLogs from './pages/JobLogs';
 import GlobalSettings from './pages/GlobalSettings';
 
-function Sidebar() {
+function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
 
   const navItems = [
@@ -35,32 +39,41 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
-      <div className="logo-container">
-        <div className="logo-icon">V</div>
-        <div className="logo-text">AutoVideo Pro</div>
-      </div>
-      
-      <ul className="nav-menu">
-        {navItems.map((item) => (
-          <li className="nav-item" key={item.path}>
-            <Link 
-              to={item.path} 
-              className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </aside>
+    <>
+      <div className={`sidebar-overlay ${isOpen ? 'show' : ''}`} onClick={() => setIsOpen(false)}></div>
+      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="logo-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="logo-icon">V</div>
+            <div className="logo-text">AutoVideo Pro</div>
+          </div>
+          <button className="mobile-close-btn" onClick={() => setIsOpen(false)}>
+            <X size={24} />
+          </button>
+        </div>
+        
+        <ul className="nav-menu">
+          {navItems.map((item) => (
+            <li className="nav-item" key={item.path}>
+              <Link 
+                to={item.path} 
+                className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    </>
   );
 }
 
-import { Toaster } from 'react-hot-toast';
-
 function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <Router>
       <Toaster position="top-right" toastOptions={{
@@ -72,13 +85,18 @@ function App() {
         }
       }} />
       <div className="app-container">
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
         
         <main className="main-content">
           <header className="top-header">
-            <div style={{ color: 'var(--text-secondary)' }}>Welcome to AutoVideo Pipeline</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <span className="badge badge-success">System Online</span>
+              <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
+                <Menu size={24} />
+              </button>
+              <div className="header-title" style={{ color: 'var(--text-secondary)' }}>Welcome to AutoVideo Pipeline</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span className="badge badge-success hide-mobile">System Online</span>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>A</div>
             </div>
           </header>

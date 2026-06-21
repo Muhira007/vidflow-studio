@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Filter, Play, RotateCcw, MoreHorizontal, Trash2, FolderSync } from 'lucide-react';
+import { Filter, Play, RotateCcw, MoreHorizontal, Trash2, FolderSync, AlertTriangle } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
 export default function VideoList() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [videoToDelete, setVideoToDelete] = useState(null);
 
   const fetchVideos = async () => {
     try {
@@ -45,6 +46,7 @@ export default function VideoList() {
   };
 
   const executeDelete = async (videoId) => {
+    setVideoToDelete(null); // Close modal immediately
     try {
       await api.delete(`/videos/${videoId}`);
       toast.success('Video berhasil dihapus!');
@@ -54,46 +56,47 @@ export default function VideoList() {
     }
   };
 
-  const handleDelete = (videoId) => {
-    toast((t) => (
-      <div style={{ padding: '4px' }}>
-        <p style={{ margin: '0 0 16px 0', fontWeight: '500', lineHeight: '1.5' }}>
-          Yakin ingin menghapus secara <strong style={{color: 'var(--danger)'}}>HARD DELETE</strong> video <strong style={{color: 'var(--accent-primary)'}}>{videoId}</strong> dari database dan folder *source*?
-        </p>
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button 
-            className="btn btn-secondary" 
-            style={{ padding: '6px 16px', fontSize: '0.85rem' }} 
-            onClick={() => toast.dismiss(t.id)}>
-            Batal
-          </button>
-          <button 
-            className="btn btn-primary" 
-            style={{ padding: '6px 16px', fontSize: '0.85rem', background: 'var(--danger)', border: 'none' }} 
-            onClick={() => { toast.dismiss(t.id); executeDelete(videoId); }}>
-            Ya, Hapus!
-          </button>
-        </div>
-      </div>
-    ), { 
-      duration: Infinity, 
-      position: 'top-center',
-      style: { minWidth: '340px' }
-    });
-  };
-
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading videos...</div>;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+      {/* DELETE CONFIRMATION MODAL */}
+      {videoToDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '20px'
+        }}>
+          <div className="card glass-panel" style={{ maxWidth: '400px', width: '100%', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: 'var(--danger)' }}>
+              <AlertTriangle size={28} />
+              <h3 style={{ margin: 0 }}>Konfirmasi Penghapusan</h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
+              Yakin ingin menghapus secara <strong style={{color: 'var(--danger)'}}>HARD DELETE</strong> video <strong style={{color: 'var(--text-primary)'}}>{videoToDelete}</strong>? <br/><br/>
+              Tindakan ini akan menghapus data dari <b>Database</b> sekaligus melenyapkan semua *file* dari folder <b>Source</b>. Aksi ini tidak dapat dibatalkan!
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setVideoToDelete(null)}>
+                Batal
+              </button>
+              <button className="btn btn-primary" style={{ background: 'var(--danger)', border: 'none', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }} onClick={() => executeDelete(videoToDelete)}>
+                <Trash2 size={16} /> Ya, Hapus!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title">Daftar Video</h1>
           <p className="page-subtitle" style={{ marginBottom: 0 }}>Kelola dan pantau semua video dalam antrian Anda.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button onClick={handleSync} className="btn btn-primary">
-            <RotateCcw size={18} /> Sync Folder
+            <FolderSync size={18} /> Sync Folder
           </button>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <select className="form-control" style={{ width: '160px' }}>
@@ -111,8 +114,8 @@ export default function VideoList() {
       </div>
 
       <div className="card glass-panel">
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div className="table-responsive">
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>ID Video</th>
@@ -153,7 +156,7 @@ export default function VideoList() {
                         <button className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Detail">
                           <MoreHorizontal size={16} />
                         </button>
-                        <button onClick={() => handleDelete(vid.id)} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus">
+                        <button onClick={() => setVideoToDelete(vid.id)} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus">
                           <Trash2 size={16} />
                         </button>
                       </div>
