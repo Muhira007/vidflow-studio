@@ -30,7 +30,7 @@ def burn_subtitles_to_video(input_video: str, subtitle_file: str, output_video: 
             settings = json.load(f)
             
     font_name = settings.get("caption_font", "DejaVu Sans")
-    font_size = settings.get("caption_size", 60)
+    font_size = settings.get("caption_size", 24)
     # Konversi hex ke BGR hex untuk ASS (misal #FF0000 -> &H0000FF)
     def hex_to_ass(hex_code):
         h = hex_code.lstrip('#')

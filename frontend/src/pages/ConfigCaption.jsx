@@ -66,7 +66,7 @@ export default function ConfigCaption() {
         <div className="form-group">
           <label className="form-label">Ukuran Font</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <input type="range" min="20" max="150" value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} style={{ flex: 1 }} />
+            <input type="range" min="5" max="50" value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} style={{ flex: 1 }} />
             <span style={{ minWidth: '40px', textAlign: 'right', fontWeight: 'bold' }}>{fontSize}px</span>
           </div>
         </div>
