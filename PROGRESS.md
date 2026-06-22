@@ -14,8 +14,8 @@ Dokumen ini melacak status pengembangan aplikasi **Auto Video Editor** berdasark
 - [x] Desain dan Migrasi Skema Database via SQLAlchemy.
 - [x] Pembuatan integrasi Celery Worker untuk pemrosesan asinkron.
 - [x] Script `watcher.py` untuk mendeteksi folder video baru secara otomatis.
-- [x] Update penggunaan SDK **OpenAI gpt-4o-mini-transcribe** dan **PySceneDetect v0.6+**.
-- [x] Keputusan Arsitektur: Resmi menggunakan **OpenAI API (`gpt-4o-mini-transcribe`)** secara eksklusif sebagai penyedia tunggal layanan kecerdasan buatan (transkripsi / caption). Deepgram sepenuhnya dihapus dari ekosistem proyek ini untuk mengefisienkan tagihan (single billing) dan keamanan konfigurasi.
+- [x] Update penggunaan SDK **OpenAI whisper-1** dan **PySceneDetect v0.6+**.
+- [x] Keputusan Arsitektur: Resmi menggunakan **OpenAI API (`whisper-1`)** secara eksklusif sebagai penyedia tunggal layanan kecerdasan buatan (transkripsi / caption). Deepgram sepenuhnya dihapus dari ekosistem proyek ini untuk mengefisienkan tagihan (single billing) dan keamanan konfigurasi.
 - [x] Pembuatan skrip Integration Test (`test_pipeline.py`) untuk memvalidasi aliran data.
 - [x] Dokumentasi Lengkap (`README.md`).
 
