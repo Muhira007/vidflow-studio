@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -10,6 +10,7 @@ class VideoStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     INVALID = "invalid"
+    UPLOADED = "uploaded"  # sudah diupload ke sosmed
 
 class Video(Base):
     __tablename__ = "videos"
@@ -39,7 +40,11 @@ class Video(Base):
     # Metadata
     original_duration = Column(Float, nullable=True)
     final_duration = Column(Float, nullable=True)
-    
+    caption_text = Column(String, nullable=True)  # teks SRT mentah hasil transkripsi Whisper
+    caption_social = Column(String, nullable=True)  # caption siap sosmed (diproses oleh DeepSeek AI)
+    uploaded_to_social = Column(Boolean, default=False)  # sudah diupload ke sosmed?
+    uploaded_at = Column(DateTime(timezone=True), nullable=True)  # kapan ditandai uploaded
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

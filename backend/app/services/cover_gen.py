@@ -1,4 +1,5 @@
 import os
+import textwrap
 from scenedetect import open_video, SceneManager
 from scenedetect.detectors import ContentDetector
 import cv2
@@ -35,17 +36,70 @@ def extract_representative_frame(video_path: str, output_image_path: str):
     capture.release()
     return output_image_path
 
-def generate_cover_image(base_image_path: str, output_path: str, title: str = "AUTO VIDEO", template: str = "default"):
-    """Tambahkan teks/elemen desain ke frame base menggunakan Pillow."""
+def _wrap_text(text: str, font, max_width: int, draw) -> list[str]:
+    """Bungkus teks menjadi beberapa baris agar tidak melebihi max_width pixel."""
+    words = text.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        test_line = f"{current_line} {word}".strip()
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        w = bbox[2] - bbox[0]
+        if w <= max_width:
+            current_line = test_line
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines if lines else [text]
+
+
+def _measure_text_height(draw, text: str, font, max_width: int) -> tuple[int, list[str]]:
+    """Ukur tinggi total & return lines tanpa render."""
+    lines = _wrap_text(text, font, max_width, draw)
+    line_height = draw.textbbox((0, 0), "Ag", font=font)[3] - draw.textbbox((0, 0), "Ag", font=font)[1]
+    return len(lines) * (line_height + 4), lines
+
+
+def _draw_multiline_text(draw, lines: list[str], font, x: float, y: float, fill: tuple, shadow: bool = False, shadow_fill: tuple = None):
+    """Render teks multi-baris yang sudah di-wrap."""
+    line_height = draw.textbbox((0, 0), "Ag", font=font)[3] - draw.textbbox((0, 0), "Ag", font=font)[1]
+
+    for i, line in enumerate(lines):
+        line_y = y + i * (line_height + 4)
+        if shadow and shadow_fill:
+            draw.text((x + 2, line_y + 2), line, font=font, fill=shadow_fill)
+        draw.text((x, line_y), line, font=font, fill=fill)
+
+
+def generate_cover_image(
+    base_image_path: str,
+    output_path: str,
+    title: str = "AUTO VIDEO",
+    template: str = "default",
+    title_position: str = "Tengah Besar",
+    bg_opacity: int = 40,
+):
+    """Tambahkan teks/elemen desain ke frame base menggunakan Pillow.
+
+    Args:
+        title_position: "Tengah Besar" | "Kiri Atas" | "Kiri Bawah" | "Bawah (Lower Third)"
+        bg_opacity: Opacity background teks (0-100)
+    """
     try:
         img = Image.open(base_image_path).convert("RGBA")
     except Exception as e:
         raise Exception(f"Tidak dapat membuka gambar base: {e}")
-        
+
     draw = ImageDraw.Draw(img)
     width, height = img.size
-    
-    # Gunakan FreeSans atau DejaVuSans yang umum di Linux
+
+    # Font scaling berdasarkan tinggi gambar
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeSansBold.ttf", size=int(height * 0.1))
     except IOError:
@@ -54,64 +108,88 @@ def generate_cover_image(base_image_path: str, output_path: str, title: str = "A
         except IOError:
             font = ImageFont.load_default()
 
-    if template == "tpl_1" or template == "default":
-        # Minimalist Bold: Teks besar di tengah dengan shadow
-        text_bbox = draw.textbbox((0, 0), title, font=font)
-        text_w = text_bbox[2] - text_bbox[0]
-        text_h = text_bbox[3] - text_bbox[1]
+    # Hitung posisi teks berdasarkan title_position
+    text_bbox = draw.textbbox((0, 0), title, font=font)
+    text_w = text_bbox[2] - text_bbox[0]
+    text_h = text_bbox[3] - text_bbox[1]
+
+    if "Kiri Atas" in title_position:
+        text_x = int(width * 0.05)
+        text_y = int(height * 0.05)
+    elif "Kiri Bawah" in title_position:
+        text_x = int(width * 0.05)
+        text_y = height - text_h - int(height * 0.1)
+    elif "Lower Third" in title_position or "Bawah" in title_position:
+        text_x = (width - text_w) / 2
+        text_y = height - text_h - int(height * 0.12)
+    else:  # "Tengah Besar" — default centered
         text_x = (width - text_w) / 2
         text_y = (height - text_h) / 2
 
-        # Draw shadow
-        draw.text((text_x + 4, text_y + 4), title, font=font, fill=(0, 0, 0, 200))
-        # Draw text
-        draw.text((text_x, text_y), title, font=font, fill=(255, 255, 255, 255))
+    bg_alpha = int(255 * bg_opacity / 100)
+    max_text_w = int(width * 0.9)  # 90% lebar gambar
+    padding = 20
+
+    # Ukur teks dulu (tanpa render) supaya background bisa digambar lebih dulu
+    text_h_total, text_lines = _measure_text_height(draw, title, font, max_text_w)
+    # Hitung ulang posisi Y untuk center secara vertikal
+    center_y = (height - text_h_total) / 2
+
+    if template == "tpl_1" or template == "default":
+        # Minimalist Bold: backdrop → teks tengah + shadow
+        text_w = min(max_text_w, max(draw.textbbox((0, 0), line, font=font)[2] for line in text_lines))
+        draw.rounded_rectangle(
+            [(width/2 - text_w/2 - padding, center_y - padding),
+             (width/2 + text_w/2 + padding, center_y + text_h_total + padding)],
+            radius=12, fill=(0, 0, 0, bg_alpha)
+        )
+        _draw_multiline_text(
+            draw, text_lines, font, width/2 - text_w/2, center_y,
+            fill=(255, 255, 255, 255),
+            shadow=True, shadow_fill=(0, 0, 0, 200)
+        )
 
     elif template == "tpl_2":
-        # News Style: Lower third background biru dengan teks putih
-        rect_height = int(height * 0.2)
-        rect_y = height - rect_height - int(height * 0.05)
-        
-        draw.rectangle([(0, rect_y), (width, rect_y + rect_height)], fill=(20, 30, 80, 230))
-        draw.rectangle([(0, rect_y), (width, rect_y + 10)], fill=(220, 30, 30, 255))
-
-        text_bbox = draw.textbbox((0, 0), title, font=font)
-        text_x = int(width * 0.05)
-        text_y = rect_y + int((rect_height - (text_bbox[3] - text_bbox[1])) / 2)
-        
-        draw.text((text_x, text_y), title, font=font, fill=(255, 255, 255, 255))
+        # News Style: Lower third full-width + garis merah
+        rect_y = height - text_h_total - 60
+        draw.rectangle([(0, rect_y), (width, height)], fill=(20, 30, 80, bg_alpha + 50))
+        draw.rectangle([(0, rect_y), (width, rect_y + 8)], fill=(220, 30, 30, 255))
+        _draw_multiline_text(
+            draw, text_lines, font, int(width * 0.05), rect_y + 20,
+            fill=(255, 255, 255, 255)
+        )
 
     elif template == "tpl_3":
-        # Gaming Focus: Teks di pojok kiri atas
-        rect_width = int(width * 0.6)
-        rect_height = int(height * 0.25)
-        draw.rectangle([(0, 0), (rect_width, rect_height)], fill=(90, 20, 150, 200))
-        
-        text_x = int(width * 0.05)
-        text_y = int(height * 0.05)
-        draw.text((text_x + 2, text_y + 2), title, font=font, fill=(0, 0, 0, 255))
-        draw.text((text_x, text_y), title, font=font, fill=(255, 200, 0, 255))
+        # Gaming Focus: Kotak ungu kiri atas + teks kuning
+        text_w = min(max_text_w, max(draw.textbbox((0, 0), line, font=font)[2] for line in text_lines))
+        draw.rounded_rectangle(
+            [(text_x - padding, center_y - padding),
+             (text_x + text_w + padding, center_y + text_h_total + padding)],
+            radius=10, fill=(90, 20, 150, bg_alpha + 40)
+        )
+        _draw_multiline_text(
+            draw, text_lines, font, text_x, center_y,
+            fill=(255, 200, 0, 255),
+            shadow=True, shadow_fill=(0, 0, 0, 255)
+        )
 
     elif template == "tpl_4":
-        # Vlog Setup: Border putih, teks bawah tengah
-        border_width = int(width * 0.02)
-        draw.rectangle([(0, 0), (width, height)], outline=(255, 255, 255, 255), width=border_width)
-        
-        text_bbox = draw.textbbox((0, 0), title, font=font)
-        text_w = text_bbox[2] - text_bbox[0]
-        text_x = (width - text_w) / 2
-        text_y = height - int(height * 0.2)
-        
-        padding = 20
+        # Vlog Setup: Border putih + rounded box tengah
+        border_width = int(width * 0.015)
+        draw.rectangle([(0, 0), (width, height)], outline=(255, 255, 255, 200), width=border_width)
+
+        text_w = min(max_text_w, max(draw.textbbox((0, 0), line, font=font)[2] for line in text_lines))
         draw.rounded_rectangle(
-            [(text_x - padding, text_y - padding), (text_x + text_w + padding, text_y + (text_bbox[3]-text_bbox[1]) + padding)],
-            radius=15,
-            fill=(0, 0, 0, 180)
+            [(width/2 - text_w/2 - padding, center_y - padding),
+             (width/2 + text_w/2 + padding, center_y + text_h_total + padding)],
+            radius=14, fill=(0, 0, 0, bg_alpha)
         )
-        draw.text((text_x, text_y), title, font=font, fill=(255, 255, 255, 255))
+        _draw_multiline_text(
+            draw, text_lines, font, width/2 - text_w/2, center_y,
+            fill=(255, 255, 255, 255)
+        )
 
     # Convert back to RGB for JPEG save
     img = img.convert("RGB")
-    # Simpan hasil
     img.save(output_path, "JPEG", quality=90)
     return output_path

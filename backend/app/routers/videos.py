@@ -51,13 +51,13 @@ def update_settings(settings: dict, db: Session = Depends(get_db)):
     current.update(settings)
     with open(SETTINGS_FILE, "w") as f:
         json.dump(current, f)
-        
+
     res = settings.get("resolution")
     if res:
         # Update all pending videos to use the new resolution
         db.query(Video).filter(Video.status == "PENDING").update({"resolution": res})
         db.commit()
-        
+
     return {"message": "Settings updated"}
 
 @router.get("/settings/caption")

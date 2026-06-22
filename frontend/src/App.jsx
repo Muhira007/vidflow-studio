@@ -1,18 +1,19 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Video, 
-  Scissors, 
-  Subtitles, 
-  Image as ImageIcon, 
-  MonitorPlay, 
+import {
+  LayoutDashboard,
+  Video,
+  Scissors,
+  Subtitles,
+  Image as ImageIcon,
+  MonitorPlay,
   ScrollText,
   Settings,
   Menu,
   X,
   UploadCloud,
-  Folder
+  Folder,
+  Film
 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
@@ -27,6 +28,7 @@ import ConfigCover from './pages/ConfigCover';
 import ConfigRender from './pages/ConfigRender';
 import JobLogs from './pages/JobLogs';
 import GlobalSettings from './pages/GlobalSettings';
+import OutputList from './pages/OutputList';
 
 function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
@@ -35,6 +37,7 @@ function Sidebar({ isOpen, setIsOpen }) {
     { path: '/', label: 'Overview', icon: <LayoutDashboard size={20} /> },
     { path: '/explorer', label: 'File Explorer', icon: <Folder size={20} /> },
     { path: '/videos', label: 'Daftar Video', icon: <Video size={20} /> },
+    { path: '/outputs', label: 'Hasil Render', icon: <Film size={20} /> },
     { path: '/config/silence-cut', label: 'Silence Cut', icon: <Scissors size={20} /> },
     { path: '/config/caption', label: 'Auto Caption', icon: <Subtitles size={20} /> },
     { path: '/config/cover', label: 'Auto Cover', icon: <ImageIcon size={20} /> },
@@ -111,6 +114,7 @@ function App() {
               <Route path="/" element={<DashboardOverview />} />
               <Route path="/explorer" element={<ErrorBoundary><FileManager /></ErrorBoundary>} />
               <Route path="/videos" element={<VideoList />} />
+              <Route path="/outputs" element={<OutputList />} />
               <Route path="/config/silence-cut" element={<ConfigSilenceCut />} />
               <Route path="/config/caption" element={<ConfigCaption />} />
               <Route path="/config/cover" element={<ConfigCover />} />

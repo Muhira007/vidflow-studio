@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     
     # External APIs
     openai_api_key: str | None = None
+    deepseek_api_key: str | None = None
     
     class Config:
         env_file = ".env"

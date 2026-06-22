@@ -5,6 +5,7 @@ const API_BASE_URL = 'http://localhost:8000/api';
 
 export default function GlobalSettings() {
   const [openaiKey, setOpenaiKey] = useState('');
+  const [deepseekKey, setDeepseekKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
@@ -14,6 +15,7 @@ export default function GlobalSettings() {
       .then(res => res.json())
       .then(data => {
         setOpenaiKey(data.openai_api_key || '');
+        setDeepseekKey(data.deepseek_api_key || '');
       })
       .catch(err => console.error("Error loading settings:", err));
   }, []);
@@ -29,7 +31,8 @@ export default function GlobalSettings() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          openai_api_key: openaiKey
+          openai_api_key: openaiKey,
+          deepseek_api_key: deepseekKey
         })
       });
       
@@ -75,6 +78,25 @@ export default function GlobalSettings() {
           </div>
         </div>
 
+        <div className="config-section" style={{ marginTop: '32px', paddingTop: '32px', borderTop: '1px solid var(--border-color)' }}>
+          <h2 className="section-title">
+            <Key size={18} style={{ marginRight: '8px' }} />
+            DeepSeek API Key
+          </h2>
+          <p className="section-description">
+            Used for AI-powered social media caption generation (DeepSeek V4 Flash).
+          </p>
+          <div className="input-group">
+            <input
+              type="password"
+              className="text-input"
+              value={deepseekKey}
+              onChange={(e) => setDeepseekKey(e.target.value)}
+              placeholder="sk-..."
+              style={{ width: '100%', maxWidth: '500px' }}
+            />
+          </div>
+        </div>
 
         {saveMessage && (
           <div style={{ marginTop: '16px', color: saveMessage.includes('success') ? 'var(--success-color)' : 'var(--danger-color)' }}>

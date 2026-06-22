@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 
 export default function ConfigRender() {
   const [resolution, setResolution] = useState('1080p');
+  const [outputFormat, setOutputFormat] = useState('MP4 (H.264)');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,6 +18,9 @@ export default function ConfigRender() {
       if (res.data.resolution) {
         setResolution(res.data.resolution);
       }
+      if (res.data.output_format) {
+        setOutputFormat(res.data.output_format);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -26,8 +30,8 @@ export default function ConfigRender() {
 
   const handleSave = async () => {
     try {
-      await api.post('/videos/settings/render', { resolution });
-      toast.success('Pengaturan Render berhasil disimpan! Semua video yang masih berstatus PENDING akan mengikuti resolusi baru ini.');
+      await api.post('/videos/settings/render', { resolution, output_format: outputFormat });
+      toast.success('Pengaturan Render berhasil disimpan!');
     } catch (err) {
       toast.error('Gagal menyimpan pengaturan: ' + err.message);
     }
@@ -59,11 +63,18 @@ export default function ConfigRender() {
 
         <div className="form-group">
           <label className="form-label">Format Output</label>
-          <select className="form-control" defaultValue="MP4 (H.264)">
+          <select
+            className="form-control"
+            value={outputFormat}
+            onChange={(e) => setOutputFormat(e.target.value)}
+          >
             <option>MP4 (H.264)</option>
             <option>MP4 (H.265 / HEVC)</option>
             <option>WebM</option>
           </select>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+            H.265 menghasilkan file lebih kecil namun proses lebih lama
+          </div>
         </div>
 
         <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>

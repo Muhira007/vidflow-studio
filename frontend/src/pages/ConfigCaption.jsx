@@ -11,6 +11,9 @@ export default function ConfigCaption() {
   const [outlineSize, setOutlineSize] = useState(2);
   const [outlineColor, setOutlineColor] = useState('#000000');
   const [position, setPosition] = useState(15); // Percentage 0 to 100
+  const [socialMaxWords, setSocialMaxWords] = useState(40);
+  const [socialHashtags, setSocialHashtags] = useState(5);
+  const [socialTone, setSocialTone] = useState('Santai & Gaul (Gen-Z)');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,6 +30,9 @@ export default function ConfigCaption() {
       if (res.data.caption_outline_size !== undefined) setOutlineSize(res.data.caption_outline_size);
       if (res.data.caption_outline) setOutlineColor(res.data.caption_outline);
       if (res.data.caption_position) setPosition(res.data.caption_position);
+      if (res.data.caption_social_max_words) setSocialMaxWords(res.data.caption_social_max_words);
+      if (res.data.caption_social_hashtags) setSocialHashtags(res.data.caption_social_hashtags);
+      if (res.data.caption_social_tone) setSocialTone(res.data.caption_social_tone);
     } catch (err) {
       console.error(err);
     } finally {
@@ -43,9 +49,12 @@ export default function ConfigCaption() {
         caption_outline_enabled: outlineEnabled,
         caption_outline_size: outlineSize,
         caption_outline: outlineColor,
-        caption_position: position
+        caption_position: position,
+        caption_social_max_words: parseInt(socialMaxWords),
+        caption_social_hashtags: parseInt(socialHashtags),
+        caption_social_tone: socialTone
       });
-      toast.success('Pengaturan Caption berhasil disimpan!');
+      toast.success('Pengaturan Caption & Sosial Media berhasil disimpan!');
     } catch (err) {
       toast.error('Gagal menyimpan pengaturan: ' + err.message);
     }
@@ -123,6 +132,49 @@ export default function ConfigCaption() {
             <input type="range" min="0" max="100" value={position} onChange={e => setPosition(parseInt(e.target.value))} style={{ flex: 1 }} />
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Atas</span>
             <span style={{ minWidth: '45px', textAlign: 'right', fontWeight: 'bold' }}>{position}%</span>
+          </div>
+        </div>
+
+        <div style={{ gridColumn: 'span 2', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--accent-primary)' }}>
+          <h3 style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            🤖 Caption Sosial Media (AI DeepSeek)
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            Hasil transkrip video akan diproses ulang oleh AI untuk menjadi caption siap upload sosmed.
+          </p>
+
+          <div className="grid-cols-3">
+            <div className="form-group">
+              <label className="form-label">Maksimum Kata</label>
+              <input type="number" min="10" max="200" className="form-control" value={socialMaxWords} onChange={e => setSocialMaxWords(e.target.value)} />
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>Caption utama (default: 40)</div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Jumlah Hashtag</label>
+              <input type="number" min="0" max="15" className="form-control" value={socialHashtags} onChange={e => setSocialHashtags(e.target.value)} />
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>0 = tanpa hashtag (default: 5)</div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Gaya Bahasa</label>
+              <select className="form-control" value={socialTone} onChange={e => setSocialTone(e.target.value)}>
+                <option value="Santai & Gaul (Gen-Z)">Santai & Gaul (Gen-Z)</option>
+                <option value="Hard Selling (FOMO)">Hard Selling (FOMO)</option>
+                <option value="Storytelling (Bercerita)">Storytelling (Bercerita)</option>
+                <option value="Edukasi & Pakar">Edukasi & Pakar</option>
+                <option value="Savage & Lucu">Savage & Lucu</option>
+                <option value="ASMR / Calming">ASMR / Calming</option>
+                <option value="Elegan & Mewah">Elegan & Mewah</option>
+                <option value="Misteri (Bikin Penasaran)">Misteri (Bikin Penasaran)</option>
+                <option value="Curhat / POV">Curhat / POV</option>
+                <option value="Jujur & Brutal Review">Jujur & Brutal Review</option>
+                <option value="Tantangan (Challenge)">Tantangan (Challenge)</option>
+                <option value="Tips & Hacks">Tips & Hacks</option>
+                <option value="Breaking News">Breaking News</option>
+                <option value="Pantun / Rima">Pantun / Rima</option>
+                <option value="Motivasi / Inspiring">Motivasi / Inspiring</option>
+                <option value="Ngerap / Cepat">Ngerap / Cepat</option>
+              </select>
+            </div>
           </div>
         </div>
 

@@ -90,11 +90,12 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 
 ### In-Scope (MVP)
 - Folder watcher berbasis ID untuk mendeteksi video mentah baru
-- Silence Cut Level 1 (trim awal/akhir) & Level 2 (hapus bagian tengah)
-- Auto caption (speech-to-text + burn-in, style diatur dari dashboard)
-- Auto cover (template dikonfigurasi dari dashboard)
-- Render otomatis ke .mp4 (HD/FHD/4K, dipilih dari dashboard)
-- Admin dashboard: konfigurasi, monitoring job, log/riwayat
+- **Silence Cut** Level 1 (trim awal/akhir), Level 2 (hapus silence amplitude), **Level 3 (VAD/AI)** — deteksi suara manusia vs noise pakai AI
+- **Auto Caption** (speech-to-text Whisper + burn-in, style diatur dari dashboard)
+- **AI Social Caption** — transkrip diolah ulang oleh DeepSeek V4 Flash menjadi caption siap upload sosmed (dengan hashtag, emoji, dan 16 pilihan gaya bahasa)
+- **Auto Cover** — 4 template + **AI-generated judul cover** dari DeepSeek (auto line-wrap)
+- Render otomatis ke .mp4 (HD/FHD/4K, codec H.264/H.265/WebM)
+- Admin dashboard: konfigurasi, monitoring job, halaman hasil render, log/riwayat
 
 ### Out-of-Scope (Fase Berikutnya — belum dirancang detail)
 - Fitur tambahan yang belum ditentukan
@@ -202,6 +203,57 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 - Dashboard menampilkan status seluruh video & job (lihat detail di [Bagian 14](#14-desain-admin-dashboard-per-halaman)).
 - Admin dapat trigger job manual, retry job gagal, dan mengubah seluruh parameter di atas tanpa menyentuh kode.
 
+### 7.7 FR7 — VAD/AI Speech Detection (Level 3)
+
+**Deskripsi:** Menggantikan silence detection berbasis amplitudo dengan **Voice Activity Detection (VAD)** berbasis AI yang membedakan suara manusia vs noise (kipas, kendaraan, bayi nangis).
+
+- Menggunakan **Silero VAD** (PyTorch, 1.6MB model) yang berjalan lokal di CPU.
+- Hanya segmen video dengan suara manusia yang dipertahankan; noise & hening otomatis dibuang.
+- Tersedia sebagai **Level 3** di halaman Silence Cut Configuration.
+
+**Parameter:**
+
+| Parameter | Default | Keterangan |
+|---|---|---|
+| Speech Threshold | 0.5 | Probabilitas minimum suara manusia (0-1). Lebih tinggi = lebih strict |
+| Padding | 200 ms | Buffer sebelum/sesudah segmen suara |
+
+**Acceptance Criteria:**
+- [ ] Suara non-manusia (kipas, kendaraan) terdeteksi sebagai noise & dihapus
+- [ ] Suara manusia tetap dipertahankan (>90% akurasi)
+
+### 7.8 FR8 — AI Social Media Caption
+
+**Deskripsi:** Hasil transkrip Whisper (.SRT) diolah ulang oleh **DeepSeek V4 Flash** untuk menghasilkan caption siap upload sosial media.
+
+- Caption AI mencakup: teks engaging + emoji + hashtag.
+- Tersedia **16 gaya bahasa** (Gen-Z, Hard Selling, Storytelling, Edukasi, Savage, dll).
+- Caption bisa digenerate **on-demand** dari halaman Hasil Render tanpa proses ulang video.
+- Parameter (max kata, jumlah hashtag, gaya) dikonfigurasi di halaman **Auto Caption**.
+
+**Parameter:**
+
+| Parameter | Default | Keterangan |
+|---|---|---|
+| Maksimum Kata | 40 | Kata dalam caption utama |
+| Jumlah Hashtag | 5 | 0 = tanpa hashtag |
+| Gaya Bahasa | Santai & Gaul (Gen-Z) | 16 pilihan gaya |
+
+### 7.9 FR9 — AI Cover Title Generation
+
+**Deskripsi:** Judul cover video digenerate otomatis oleh **DeepSeek V4 Flash** dari transkrip, menggantikan input manual.
+
+- Judul pendek (default 5 kata) agar muat di cover.
+- **Auto line-wrap** — teks otomatis turun ke baris baru jika melebihi lebar gambar.
+- 16 gaya bahasa (sama dengan caption AI).
+
+**Parameter:**
+
+| Parameter | Default | Keterangan |
+|---|---|---|
+| Gaya Bahasa Judul | Santai & Gaul (Gen-Z) | 16 pilihan |
+| Maksimum Kata Judul | 5 | 2-10 kata |
+
 ---
 
 ## 8. Non-Functional Requirements
@@ -292,11 +344,15 @@ erDiagram
     
     VIDEOS {
         string id PK "Nama unik folder video"
-        string status "PENDING, PROCESSING, dll"
+        string status "PENDING, PROCESSING, COMPLETED, FAILED, INVALID, UPLOADED"
         int silence_cut_level
         float silence_threshold
         string caption_font
+        string caption_text "Teks transkrip mentah (SRT)"
+        string caption_social "Caption AI siap sosmed (DeepSeek)"
         string cover_template
+        boolean uploaded_to_social "Sudah diupload ke sosmed?"
+        datetime uploaded_at
         string resolution
         datetime created_at
         datetime updated_at
@@ -329,6 +385,13 @@ erDiagram
 | GET | `/api/settings/{video_id}` | Ambil override setting per video |
 | PUT | `/api/settings/{video_id}` | Update override setting per video |
 | GET | `/api/logs` | Ambil log/histori proses (dengan filter tanggal & status) |
+| GET | `/api/outputs` | List video completed dengan file output |
+| GET | `/api/outputs/{id}/caption` | Ambil teks transkrip (plain/SRT) |
+| GET | `/api/outputs/{id}/social-caption` | Ambil/generate caption AI sosmed |
+| GET | `/api/outputs/{id}/download` | Download file output video |
+| PATCH | `/api/outputs/{id}/toggle-uploaded` | Toggle status upload sosmed |
+| DELETE | `/api/outputs/{id}` | Hapus video + semua file terkait |
+| PUT | `/api/settings` | Update API keys (OpenAI + DeepSeek) |
 
 ---
 
@@ -348,20 +411,27 @@ erDiagram
 - Tabel: ID (nama folder), status tiap step (ikon), durasi asli vs setelah cut, tombol aksi (Proses / Retry / Detail)
 - Filter: status, tanggal masuk
 
+**Hasil Render**
+- Tabel video yang sudah COMPLETED: preview/cover, ID, caption AI (tombol Salin), download, toggle upload sosmed, hapus
+- Filter: Upload Sosmed (Semua / Sudah / Belum)
+- Pagination: 20 data per halaman
+- Video player pop-up (klik cover untuk preview)
+
 **Konfigurasi Silence Cut**
-- Toggle: Nonaktif / Level 1 / Level 2
-- Input: threshold dB, durasi minimum diam, padding (khusus Level 2)
+- Toggle: Nonaktif / Level 1 / Level 2 / **Level 3 (VAD/AI)**
+- Level 3: deteksi suara manusia vs noise pakai Silero VAD
+- Input: threshold dB, durasi minimum diam, padding, VAD speech threshold
 
 **Konfigurasi Caption**
-- Dropdown jenis font (terbatas pada font sistem Linux seperti DejaVu/Ubuntu), slider ukuran font (rentang 5-50px)
-- Color picker warna teks & outline, serta toggle untuk mengaktifkan/menonaktifkan outline + ketebalan outline
-- Slider persentase posisi (0% - 100%) menggunakan perhitungan MarginV di kanvas virtual ASS 288px
-- Toggle style highlight kata aktif (karaoke-style)
+- Dropdown jenis font, slider ukuran font (5-50px)
+- Color picker warna teks & outline, toggle outline + ketebalan
+- Slider posisi vertikal (0-100%, MarginV virtual 288px)
+- **Section AI Caption Sosmed:** max kata, jumlah hashtag, 16 gaya bahasa
 
 **Konfigurasi Cover**
-- Pilihan template (grid thumbnail)
-- Pengaturan posisi judul/teks
-- Upload logo/watermark (opsional)
+- Pilihan template (4 template dengan preview)
+- Posisi judul, opacity background
+- **AI Generate Judul:** 16 gaya bahasa + max kata (DeepSeek)
 
 **Konfigurasi Render**
 - Dropdown resolusi: HD / FHD / 4K
@@ -384,7 +454,9 @@ erDiagram
 | Frontend Admin | React / Next.js | Cocok untuk dashboard interaktif (slider, color picker, dsb.) |
 | Video Engine | FFmpeg | Standar industri untuk cut, burn subtitle, render |
 | Folder Watcher | Python `watchdog` | Deteksi perubahan filesystem real-time |
-| Cover Generation | PySceneDetect + Pillow/OpenCV | Scene detection + compositing gambar |
+| Cover Generation | PySceneDetect + Pillow/OpenCV | Scene detection + compositing gambar + auto text-wrap |
+| VAD (Speech Detection) | Silero VAD (PyTorch) | Deteksi suara manusia vs noise, jalan lokal CPU |
+| AI Caption & Cover Title | DeepSeek V4 Flash API | Generate caption sosmed + judul cover dari transkrip |
 | Deployment (MVP Local) | Native WSL services + Shell scripts | PostgreSQL & Redis sebagai service native; `start-all.sh` untuk one-click startup |
 | Deployment (Server Online) | Docker + Docker Compose | Untuk fase migrasi ke server (Fase 6) |
 
@@ -398,14 +470,13 @@ erDiagram
 |---|---|---|
 | OpenAI API (`whisper-1`) | ~$0.006/menit | Pilihan eksklusif (Deepgram ditiadakan): Cepat, akurat, satu tagihan, ada dukungan output SRT/VTT yang mudah diolah. |
 
-**LLM (opsional, fase lanjutan)** — untuk fitur teks pintar seperti auto-judul cover:
+**AI Caption & Cover Title (DeepSeek V4 Flash)** — untuk generate caption sosmed + judul cover:
 
-| Model | Harga (per 1 juta token) | Catatan |
+| Model | Harga (per 1M token) | Catatan |
 |---|---|---|
-| Claude Haiku 4.5 | $1 input / $5 output | Murah & cepat, cocok untuk task teks pendek berulang |
-| Claude Sonnet 4.6 | $3 input / $15 output | Kualitas lebih baik untuk teks yang butuh nuansa |
+| DeepSeek V4 Flash | $0.14 input / $0.28 output | OpenAI-compatible, reasoning mode bisa dinonaktifkan |
 
-> Desain backend sebaiknya pakai abstraction layer (interface `TranscriptionService`) supaya provider STT bisa diganti tanpa merombak banyak kode.
+> API keys dikelola dari halaman **Global Settings & API Keys** di dashboard. DeepSeek digunakan untuk 2 fitur: caption sosial media & judul cover otomatis.
 
 ---
 
@@ -425,10 +496,10 @@ erDiagram
 | Komponen | Estimasi Biaya/Bulan |
 |---|---|
 | STT — OpenAI `whisper-1` | ~$9 |
-| LLM opsional (Claude Haiku 4.5, teks pendek per video) | ~$1–3 |
-| **Total estimasi (MVP, tanpa server online)** | **~$10–12/bulan** |
+| AI Caption + Cover — DeepSeek V4 Flash | ~$0.50–1 |
+| **Total estimasi (MVP, tanpa server online)** | **~$10–13/bulan** |
 
-> Angka di atas murni estimasi berdasar asumsi volume; sesuaikan dengan volume video harian yang sebenarnya. Biaya server/hosting belum termasuk karena fase MVP masih local.
+> DeepSeek V4 Flash sangat murah ($0.14/M input, $0.28/M output). Per video (~200 token output untuk caption + ~20 token untuk judul cover) hanya perlu ~$0.001.
 
 ---
 
@@ -449,9 +520,9 @@ erDiagram
 | Fase 0 — Setup | Minggu 1–2 | Struktur repo, schema DB awal, base Docker |
 | Fase 1 — Core Pipeline | Minggu 3–5 | Folder watcher, job queue, silence cut Level 1 & 2 |
 | Fase 2 — Auto Caption | Minggu 6–7 | Integrasi STT API, generate ASS, burn caption + kontrol admin |
-| Fase 3 — Auto Cover | Minggu 8 | Generate cover otomatis + konfigurasi admin |
-| Fase 4 — Render & Dashboard Lengkap | Minggu 9–10 | Render multi-resolusi, dashboard monitoring penuh |
-| Fase 5 — Testing Lokal | Minggu 11 | End-to-end testing di laptop |
+| Fase 3 — Auto Cover | Minggu 8 | Generate cover + AI judul (DeepSeek) + konfigurasi admin |
+| Fase 4 — Render & Dashboard Lengkap | Minggu 9–10 | Render multi-resolusi multi-codec, dashboard monitoring + halaman hasil render |
+| Fase 5 — Testing & Enhancement | Minggu 11–12 | E2E testing, VAD AI, AI caption sosmed, Windows launcher |
 | Fase 6 — Migrasi Server Online | Menyusul | Setup VPS/cloud, CI/CD, monitoring produksi |
 
 ---

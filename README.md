@@ -1,16 +1,21 @@
 # 🎬 Auto Video Editor
 
-Auto Video Editor adalah aplikasi *full-stack* pintar yang dirancang untuk mempermudah dan mengotomatisasi alur kerja pengeditan video. Aplikasi ini mendeteksi video baru, memotong bagian hening secara otomatis (*silence cut*), menghasilkan *subtitle* menggunakan AI (OpenAI Whisper), dan menerapkan desain *cover* dinamis.
+Auto Video Editor adalah aplikasi *full-stack* pintar untuk mengotomatisasi alur kerja pengeditan video. Fitur utama:
+
+- 🤖 **VAD/AI Speech Detection** — deteksi suara manusia vs noise (Silero VAD)
+- ✂️ **Silence Cut 3 Level** — amplitude-based + AI-based cutting
+- 📝 **Auto Caption** — transkripsi Whisper + burn-in subtitle
+- ✨ **AI Social Caption** — caption siap sosmed via DeepSeek (16 gaya bahasa)
+- 🖼️ **Auto Cover** — 4 template + AI-generated judul (DeepSeek)
+- 🎥 **Multi-Codec Render** — H.264 / H.265 / WebM, HD/FHD/4K
 
 ## 🏗 Arsitektur Sistem
 
-Aplikasi ini dibangun menggunakan arsitektur modern berbasis microservices:
-
-- **Frontend:** React + Vite + TailwindCSS (Antarmuka pengguna interaktif).
-- **Backend API:** FastAPI (Menerima permintaan dari frontend dan mengatur alur kerja).
-- **Task Worker:** Celery (Memproses video di latar belakang menggunakan `FFmpeg` dan `PySceneDetect`).
-- **Message Broker:** Redis (Sebagai perantara antrean tugas untuk Celery).
-- **Database:** PostgreSQL (Menyimpan status video, konfigurasi, dan *job logs*).
+- **Frontend:** React + Vite — Dashboard interaktif
+- **Backend API:** FastAPI — Orchestrator + REST API
+- **Task Worker:** Celery + Redis — Pipeline async (FFmpeg, PySceneDetect, PyTorch)
+- **Database:** PostgreSQL — Video, job logs, konfigurasi
+- **AI Services:** OpenAI Whisper (STT) + DeepSeek V4 Flash (Caption & Cover) + Silero VAD (Speech Detection)
 
 ---
 
@@ -100,22 +105,22 @@ Setelah start:
 
 ## 💡 Cara Penggunaan (Workflow)
 
-1. **Buka Dashboard:** Buka browser dan akses `http://localhost:5173/`.
-2. **Sync Folder:** Masuk ke halaman **Daftar Video**, klik tombol **Sync Folder** untuk mendaftarkan folder video yang sudah ada ke database.
-3. **Atur Konfigurasi AI:** Masuk ke menu **Global Settings**, masukkan *OpenAI API Key* Anda, lalu simpan.
-4. **Daftarkan Video Baru:**
-   - Masuk ke menu **File Explorer** dari panel kiri.
-   - Klik kanan untuk membuat folder baru (sebagai ID Video).
-   - Masuk ke folder tersebut, klik **Upload File** untuk mengunggah file `.mp4`.
-   - Sistem akan otomatis mendaftarkannya ke database.
-5. **Mulai Pemrosesan:** Buka halaman **Daftar Video**, klik tombol **▶ Process** untuk memulai pipeline.
-6. **Pantau Proses:** Celery akan mengeksekusi tugas di latar belakang. Status diperbarui secara *real-time*.
+1. **Buka Dashboard:** `http://localhost:5173/`
+2. **Isi API Keys:** Masuk ke **Global Settings**, isi OpenAI + DeepSeek API Key, simpan.
+3. **Upload Video:**
+   - **File Explorer** → buat folder baru (ID Video) → upload `.mp4`
+   - Atau taruh langsung folder berisi `.mp4` ke `source/`
+4. **Konfigurasi Pipeline:**
+   - **Silence Cut:** Pilih Level 3 (VAD/AI) untuk deteksi suara manusia
+   - **Auto Caption:** Atur font, warna, posisi + AI Caption Sosmed (gaya bahasa)
+   - **Auto Cover:** Pilih template + AI Generate Judul (DeepSeek)
+   - **Render Settings:** Pilih resolusi + codec (H.264/H.265/WebM)
+5. **Proses:** **Daftar Video** → klik **▶ Process**
+6. **Hasil:** Buka **Hasil Render** → salin caption AI, download video, tandai uploaded
 
 ---
 
 ## ⚙️ Variabel Lingkungan (.env)
-
-Konfigurasi environment tersimpan di `backend/.env`:
 
 ```ini
 # Database Connection
@@ -127,21 +132,24 @@ CELERY_BROKER_URL="redis://localhost:6379/0"
 CELERY_RESULT_BACKEND="redis://localhost:6379/0"
 
 # External APIs
-OPENAI_API_KEY="your-openai-api-key"
+OPENAI_API_KEY="sk-..."          # Whisper STT
+DEEPSEEK_API_KEY="sk-..."        # AI Caption + Cover Title
 ```
+
+> API keys bisa diisi langsung dari dashboard: **Global Settings & API Keys**.
 
 ---
 
 ## 📝 Tips & Troubleshooting
 
-- **Sync Folder gagal "Network Error":** Pastikan PostgreSQL berjalan (`pg_isready -h localhost -p 5432`). Jika tidak, jalankan `sudo pg_ctlcluster 18 main start`.
-- **Restart Celery:** Jika Anda mengubah source code Python di backend, matikan Celery lalu jalankan ulang. Celery tidak *auto-reload* seperti FastAPI.
-- **Frontend tidak muncul:** Cek log di `logs/frontend.log`. Jika ada error "CMD.EXE" / "UNC paths not supported", pastikan menjalankan dari dalam WSL (bukan dari Windows PowerShell langsung).
-- **Tampilan Auto Caption:**
-  - **Jenis Font:** Sistem hanya memproses font Linux bawaan (`DejaVu Sans`, `Ubuntu`, `DejaVu Serif`).
-  - **Posisi Persentase:** Slider 0% (Bawah) hingga 100% (Atas) menggunakan kanvas virtual ASS 288px.
-- **Toleransi Silence Cut Level 1:** Sistem menyisakan padding 0.5 detik di awal video agar suara pertama tidak terpotong.
-- **Gagal koneksi database:** Pastikan port di `backend/.env` sesuai dengan port PostgreSQL (`5432`).
+- **Sync Folder "Network Error":** Pastikan PostgreSQL berjalan (`pg_isready`). `sudo pg_ctlcluster 18 main start`
+- **Restart Celery:** Setiap ubah kode Python di backend/tasks/services → restart Celery (tidak auto-reload).
+- **DeepSeek caption kosong:** Pastikan `DEEPSEEK_API_KEY` sudah diisi di Global Settings.
+- **Render H.265 gagal "Error opening encoder":** Video 10-bit → sudah di-handle auto-konversi ke `yuv420p`.
+- **Cover Title "Test Title 1":** Setting lama — buka Auto Cover Config → pilih gaya bahasa → Save.
+- **VAD tidak deteksi suara:** Coba turunkan Speech Threshold ke 0.3 di Silence Cut Config.
+- **Font Caption:** Sistem pakai font Linux (`DejaVu Sans`, `Ubuntu`, `DejaVu Serif`).
+- **Database connection:** Port PostgreSQL: `5432` (cek `backend/.env`).
 
 ---
 

@@ -8,6 +8,7 @@ export default function ConfigSilenceCut() {
   const [threshold, setThreshold] = useState(-30.0);
   const [minDuration, setMinDuration] = useState(0.5);
   const [padding, setPadding] = useState(150);
+  const [vadThreshold, setVadThreshold] = useState(0.5);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,11 +22,13 @@ export default function ConfigSilenceCut() {
       if (data.silence_cut_level !== undefined) {
         if (data.silence_cut_level === 0) setLevel('Nonaktif');
         else if (data.silence_cut_level === 1) setLevel('Level 1');
-        else setLevel('Level 2');
+        else if (data.silence_cut_level === 2) setLevel('Level 2');
+        else if (data.silence_cut_level === 3) setLevel('Level 3 (VAD/AI)');
       }
       if (data.silence_threshold !== undefined) setThreshold(data.silence_threshold);
       if (data.min_silence_duration !== undefined) setMinDuration(data.min_silence_duration);
       if (data.silence_padding !== undefined) setPadding(data.silence_padding);
+      if (data.vad_threshold !== undefined) setVadThreshold(data.vad_threshold);
     } catch (err) {
       console.error(err);
     } finally {
@@ -36,14 +39,17 @@ export default function ConfigSilenceCut() {
   const handleSave = async () => {
     let numericLevel = 2;
     if (level === 'Nonaktif') numericLevel = 0;
-    if (level === 'Level 1') numericLevel = 1;
+    else if (level === 'Level 1') numericLevel = 1;
+    else if (level === 'Level 2') numericLevel = 2;
+    else if (level.startsWith('Level 3')) numericLevel = 3;
 
     try {
       await api.post('/videos/settings/silence', {
         silence_cut_level: numericLevel,
         silence_threshold: parseFloat(threshold),
         min_silence_duration: parseFloat(minDuration),
-        silence_padding: parseInt(padding)
+        silence_padding: parseInt(padding),
+        vad_threshold: parseFloat(vadThreshold)
       });
       toast.success('Pengaturan Silence Cut berhasil disimpan!');
     } catch (err) {
@@ -62,8 +68,8 @@ export default function ConfigSilenceCut() {
         <div className="form-group" style={{ marginBottom: '32px' }}>
           <label className="form-label">Mode Pemotongan</label>
           <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
-            {['Nonaktif', 'Level 1', 'Level 2'].map(opt => (
-              <div 
+            {['Nonaktif', 'Level 1', 'Level 2', 'Level 3 (VAD/AI)'].map(opt => (
+              <div
                 key={opt}
                 onClick={() => setLevel(opt)}
                 style={{
@@ -75,21 +81,48 @@ export default function ConfigSilenceCut() {
                   flex: 1,
                   textAlign: 'center',
                   fontWeight: level === opt ? 600 : 400,
-                  transition: 'var(--transition-fast)'
+                  transition: 'var(--transition-fast)',
+                  minWidth: '140px'
                 }}
               >
-                {opt}
+                {opt.replace(' (VAD/AI)', '')}
+                <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 600, display: 'block' }}>
+                  {opt.includes('VAD') ? '🤖 VAD/AI' : ''}
+                </span>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', fontWeight: 400 }}>
                   {opt === 'Nonaktif' && 'Tidak ada pemotongan'}
                   {opt === 'Level 1' && 'Hanya potong awal & akhir video'}
-                  {opt === 'Level 2' && 'Potong semua jeda diam (Tengah, Awal, Akhir)'}
+                  {opt === 'Level 2' && 'Potong semua jeda diam (Amplitudo)'}
+                  {opt.includes('VAD') && 'AI deteksi suara manusia vs noise'}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {level !== 'Nonaktif' && (
+        {level.startsWith('Level 3') && (
+          <div style={{ animation: 'fadeIn 0.3s ease' }}>
+            <h3 style={{ marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)' }}>
+              🤖 Parameter VAD (Voice Activity Detection)
+            </h3>
+            <div className="grid-cols-2">
+              <div className="form-group">
+                <label className="form-label">Speech Threshold (0-1)</label>
+                <input type="number" step="0.05" min="0.1" max="0.9" className="form-control" value={vadThreshold} onChange={e => setVadThreshold(e.target.value)} />
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  Lebih tinggi = lebih strict (hanya suara jelas). Default: 0.5
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Padding (ms)</label>
+                <input type="number" className="form-control" value={padding} onChange={e => setPadding(e.target.value)} />
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>Buffer sebelum/sesudah segmen suara</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {level !== 'Nonaktif' && !level.startsWith('Level 3') && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <h3 style={{ marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)' }}>
               Parameter Threshold
