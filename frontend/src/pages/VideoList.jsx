@@ -41,7 +41,18 @@ export default function VideoList() {
       toast.success(`Sinkronisasi berhasil! ${res.data.added} video baru ditambahkan ke database.`);
       fetchVideos();
     } catch (error) {
-      toast.error('Gagal sinkronisasi: ' + error.message);
+      let errMsg = 'Gagal sinkronisasi';
+      // HTTP error with response body
+      if (error.response?.data?.detail) {
+        errMsg += ': ' + error.response.data.detail;
+      } else if (error.response?.status) {
+        errMsg += `: Server error (${error.response.status})`;
+      } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        errMsg += ': Tidak dapat terhubung ke server. Pastikan backend berjalan.';
+      } else {
+        errMsg += ': ' + error.message;
+      }
+      toast.error(errMsg);
     }
   };
 

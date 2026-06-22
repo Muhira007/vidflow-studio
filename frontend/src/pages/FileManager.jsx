@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2, Edit3, Image as ImageIcon } from 'lucide-react';
+import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2, Edit3, Image as ImageIcon, Play, X } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -21,6 +21,11 @@ export default function FileManager() {
   const [newName, setNewName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+
+  // Video Player State
+  const [showPlayer, setShowPlayer] = useState(false);
+  const [playerVideoUrl, setPlayerVideoUrl] = useState('');
+  const [playerVideoName, setPlayerVideoName] = useState('');
 
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -79,6 +84,8 @@ export default function FileManager() {
         setCurrentFolder(targetName);
         setSelectedItems([]);
         setIsMobileSelectionMode(false);
+      } else {
+        openVideoPlayer(targetName);
       }
       if (e.cancelable) e.preventDefault();
     }
@@ -117,8 +124,38 @@ export default function FileManager() {
       setCurrentFolder(targetName);
       setSelectedItems([]);
       setIsMobileSelectionMode(false);
+    } else {
+      openVideoPlayer(targetName);
     }
   };
+
+  const openVideoPlayer = (filename) => {
+    const folder = currentFolder;
+    if (!folder) return;
+    // Build stream URL using the same base as our API
+    const base = api.defaults.baseURL || 'http://localhost:8000/api';
+    const url = `${base}/fs/stream/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
+    setPlayerVideoUrl(url);
+    setPlayerVideoName(filename);
+    setShowPlayer(true);
+  };
+
+  const closeVideoPlayer = () => {
+    setShowPlayer(false);
+    setPlayerVideoUrl('');
+    setPlayerVideoName('');
+  };
+
+  // Close player on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showPlayer) {
+        closeVideoPlayer();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPlayer]);
 
   const handleContextMenu = (e, type, target) => {
     e.preventDefault();
@@ -175,9 +212,19 @@ export default function FileManager() {
       toast.success("Folder berhasil dibuat");
       setShowCreateModal(false);
       fetchItems();
-      
-      // Auto register to DB
-      await api.post('/videos/sync');
+
+      // Auto register to DB (non-critical — show separate toast on failure)
+      try {
+        await api.post('/videos/sync');
+      } catch (syncError) {
+        let syncErrMsg = 'Gagal sinkronisasi ke database';
+        if (syncError.response?.data?.detail) {
+          syncErrMsg += ': ' + syncError.response.data.detail;
+        } else if (syncError.code === 'ERR_NETWORK' || syncError.message === 'Network Error') {
+          syncErrMsg += ': Tidak dapat terhubung ke server. Pastikan backend berjalan.';
+        }
+        toast.error(syncErrMsg);
+      }
     } catch (error) {
       let errMsg = "Gagal membuat folder";
       const detail = error.response?.data?.detail;
@@ -479,6 +526,9 @@ export default function FileManager() {
 
           {contextMenu.type === 'file' && (
             <>
+              <div className="context-menu-item" onClick={() => { openVideoPlayer(contextMenu.target); setContextMenu({...contextMenu, visible:false}); }}>
+                <Play size={16} /> Preview Video
+              </div>
               <div className="context-menu-item text-danger" onClick={() => handleDelete(contextMenu.target, 'file')}>
                 <Trash2 size={16} /> {selectedItems.length > 1 ? `Hapus ${selectedItems.length} File` : `Hapus File`}
               </div>
@@ -504,6 +554,69 @@ export default function FileManager() {
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
               <button className="btn btn-secondary" onClick={() => setShowRenameModal(false)}>Batal</button>
               <button className="btn btn-primary" onClick={submitRename}>Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Player Modal */}
+      {showPlayer && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+            zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+          onClick={closeVideoPlayer}
+        >
+          <div
+            className="card glass-panel"
+            style={{
+              width: '90vw', maxWidth: '900px',
+              animation: 'fadeIn 0.3s ease-out',
+              display: 'flex', flexDirection: 'column',
+              maxHeight: '90vh'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 16px', borderBottom: '1px solid var(--border-color)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Play size={20} style={{ color: 'var(--accent-primary)' }} />
+                <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                  {playerVideoName}
+                </span>
+              </div>
+              <button
+                onClick={closeVideoPlayer}
+                style={{
+                  background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px',
+                  padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  transition: 'background 0.2s'
+                }}
+                className="hover-bg-light"
+              >
+                <X size={18} color="var(--text-secondary)" />
+              </button>
+            </div>
+
+            {/* Video Element */}
+            <div style={{ padding: '8px', background: '#000', borderRadius: '0 0 12px 12px' }}>
+              <video
+                controls
+                autoPlay
+                style={{ width: '100%', maxHeight: '70vh', borderRadius: '4px', display: 'block' }}
+                src={playerVideoUrl}
+                onError={(e) => {
+                  toast.error('Gagal memutar video. Format mungkin tidak didukung browser.');
+                }}
+              >
+                Browser Anda tidak mendukung pemutaran video HTML5.
+              </video>
             </div>
           </div>
         </div>

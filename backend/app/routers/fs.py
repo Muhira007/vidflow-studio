@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import FileResponse
 import os
 import shutil
 from typing import List
 
 router = APIRouter()
 BASE_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
+TMP_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/tmp"
+OUTPUT_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/output"
 
 @router.get("/list")
 def list_directory():
@@ -75,3 +78,48 @@ def delete_file(folder: str, filename: str):
         raise HTTPException(status_code=404, detail="File not found")
     os.remove(target_file)
     return {"message": "File deleted"}
+
+
+@router.get("/stream/{folder}/{filename}")
+def stream_video(folder: str, filename: str):
+    """Stream a video file from source/, tmp/, or output/ directory with range request support."""
+    # Prevent path traversal
+    if ".." in folder or ".." in filename or "/" in folder:
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    # Search order: source → tmp → output
+    search_dirs = [
+        os.path.join(BASE_DIR, folder, filename),
+        os.path.join(TMP_DIR, folder, filename),
+        os.path.join(OUTPUT_DIR, folder, filename),
+    ]
+
+    file_path = None
+    for candidate in search_dirs:
+        if os.path.isfile(candidate):
+            file_path = candidate
+            break
+
+    if file_path is None:
+        raise HTTPException(status_code=404, detail="File not found in any directory")
+
+    # Determine media type
+    ext = os.path.splitext(filename)[1].lower()
+    media_type_map = {
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mov": "video/quicktime",
+        ".mkv": "video/x-matroska",
+        ".avi": "video/x-msvideo",
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".ogg": "video/ogg",
+    }
+    media_type = media_type_map.get(ext, "application/octet-stream")
+
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        filename=filename,
+        headers={"Accept-Ranges": "bytes"},
+    )

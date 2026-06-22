@@ -211,7 +211,7 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 | Performa | Satu video durasi ≤ 10 menit selesai diproses penuh (silence cut → caption → cover → render) dalam waktu wajar sesuai kapasitas hardware; target spesifik ditentukan setelah benchmark awal |
 | Reliabilitas | Job yang gagal di satu step tidak menghapus progres step sebelumnya; bisa di-retry dari step yang gagal saja |
 | Skalabilitas | Arsitektur job queue memungkinkan penambahan worker tanpa mengubah kode utama (relevan saat migrasi ke server) |
-| Portabilitas | Environment dikemas dengan Docker agar transisi local → server tidak butuh setup ulang manual |
+| Portabilitas | MVP local menggunakan service native (PostgreSQL, Redis) dengan startup scripts. Migrasi ke server akan menggunakan Docker untuk transisi tanpa setup ulang |
 | Maintainability | Parameter pipeline (threshold, style, dsb.) disimpan di database/config, bukan hardcoded |
 | Observability | Setiap job punya log step-by-step yang bisa ditelusuri saat terjadi error |
 
@@ -242,11 +242,12 @@ graph TD
 | Komponen | Tanggung Jawab |
 |---|---|
 | Folder Watcher | Mendeteksi folder ID baru, mendaftarkan video ke database |
-| Database (PostgreSQL) | Menyimpan data video, job, dan konfigurasi |
+| Database (PostgreSQL) | Menyimpan data video, job, dan konfigurasi (native service, port 5432) |
 | Admin Dashboard | UI untuk konfigurasi, trigger job, monitoring |
-| Job Queue (Celery + Redis) | Mengantre & mendistribusikan pekerjaan berat ke worker secara async |
+| Job Queue (Celery + Redis) | Mengantre & mendistribusikan pekerjaan berat ke worker secara async (Redis native service, port 6379) |
 | Worker | Menjalankan pipeline pemrosesan video tahap demi tahap |
 | Output Folder | Lokasi penyimpanan hasil akhir .mp4 |
+| Startup Scripts | `start-all.sh` / `stop-all.sh` (WSL) + Windows Desktop `.bat` launchers untuk one-click operation |
 
 ---
 
@@ -384,7 +385,8 @@ erDiagram
 | Video Engine | FFmpeg | Standar industri untuk cut, burn subtitle, render |
 | Folder Watcher | Python `watchdog` | Deteksi perubahan filesystem real-time |
 | Cover Generation | PySceneDetect + Pillow/OpenCV | Scene detection + compositing gambar |
-| Deployment | Docker + Docker Compose | Transisi local → server tanpa setup ulang |
+| Deployment (MVP Local) | Native WSL services + Shell scripts | PostgreSQL & Redis sebagai service native; `start-all.sh` untuk one-click startup |
+| Deployment (Server Online) | Docker + Docker Compose | Untuk fase migrasi ke server (Fase 6) |
 
 ---
 

@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "Auto Video Editor"
     
     # Database Settings
-    database_url: str = "postgresql://postgres:postgres@localhost:5433/auto_video_editor"
+    database_url: str = "postgresql://postgres:postgres@localhost:5432/auto_video_editor"
     
     # Celery & Redis
     redis_url: str = "redis://localhost:6379/0"
