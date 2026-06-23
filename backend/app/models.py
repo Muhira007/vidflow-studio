@@ -4,11 +4,23 @@ from sqlalchemy.sql import func
 import enum
 from app.database import Base
 
+class ProductGroup(Base):
+    """Groups source folders by product for AI context enrichment."""
+    __tablename__ = "product_groups"
+
+    id = Column(String, primary_key=True, index=True)  # nama folder di source/
+    product_name = Column(String, default="")            # "Produk Tissue Murah"
+    product_description = Column(String, nullable=True)   # deskripsi opsional
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
 class VideoStatus(str, enum.Enum):
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
     INVALID = "invalid"
     UPLOADED = "uploaded"  # sudah diupload ke sosmed
 
@@ -42,6 +54,9 @@ class Video(Base):
     final_duration = Column(Float, nullable=True)
     caption_text = Column(String, nullable=True)  # teks SRT mentah hasil transkripsi Whisper
     caption_social = Column(String, nullable=True)  # caption siap sosmed (diproses oleh DeepSeek AI)
+    celery_task_id = Column(String, nullable=True)  # ID task Celery untuk cancel
+    source_folder = Column(String, nullable=True)  # folder sumber (grup multi-video)
+    source_filename = Column(String, nullable=True)  # nama file sumber asli
     uploaded_to_social = Column(Boolean, default=False)  # sudah diupload ke sosmed?
     uploaded_at = Column(DateTime(timezone=True), nullable=True)  # kapan ditandai uploaded
 

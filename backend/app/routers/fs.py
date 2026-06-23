@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 import os
 import shutil
 from typing import List
+
+from app.database import get_db
+from app.models import ProductGroup, Video, JobLog
 
 router = APIRouter()
 BASE_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
@@ -59,25 +63,76 @@ def rename_folder(old_name: str = Form(...), new_name: str = Form(...)):
     return {"message": "Folder renamed"}
 
 @router.delete("/delete/{name}")
-def delete_folder(name: str):
+def delete_folder(name: str, db: Session = Depends(get_db)):
+    """Delete folder from disk AND clean up all related DB records."""
     target_dir = os.path.join(BASE_DIR, name)
-    if not os.path.exists(target_dir):
-        raise HTTPException(status_code=404, detail="Folder not found")
-        
-    try:
-        shutil.rmtree(target_dir)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        
-    return {"message": "Folder deleted"}
+
+    # Delete physical folder
+    if os.path.exists(target_dir):
+        try:
+            shutil.rmtree(target_dir)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # Clean up database: delete JobLogs → Videos → ProductGroup for this folder
+    deleted_videos = 0
+    deleted_groups = 0
+
+    videos = db.query(Video).filter(Video.source_folder == name).all()
+    for video in videos:
+        # Delete job logs for this video
+        db.query(JobLog).filter(JobLog.video_id == video.id).delete()
+        db.delete(video)
+        deleted_videos += 1
+
+    # Delete the ProductGroup
+    group = db.query(ProductGroup).filter(ProductGroup.id == name).first()
+    if group:
+        db.delete(group)
+        deleted_groups = 1
+
+    db.commit()
+
+    return {
+        "message": f"Folder '{name}' deleted",
+        "videos_deleted": deleted_videos,
+        "group_deleted": deleted_groups > 0,
+    }
 
 @router.delete("/delete_file/{folder}/{filename}")
-def delete_file(folder: str, filename: str):
+def delete_file(folder: str, filename: str, db: Session = Depends(get_db)):
+    """Delete a single file AND its associated Video/JobLog records."""
     target_file = os.path.join(BASE_DIR, folder, filename)
-    if not os.path.exists(target_file):
-        raise HTTPException(status_code=404, detail="File not found")
-    os.remove(target_file)
-    return {"message": "File deleted"}
+
+    if os.path.exists(target_file):
+        os.remove(target_file)
+
+    # Also clean up the matching Video record
+    name_no_ext = os.path.splitext(filename)[0]
+    video_id = f"{folder}/{name_no_ext}"
+
+    video = db.query(Video).filter(Video.id == video_id).first()
+    if video:
+        db.query(JobLog).filter(JobLog.video_id == video.id).delete()
+        db.delete(video)
+        db.commit()
+
+    # Also clean up tmp and output files for this video
+    safe_id = video_id.replace("/", "_")
+    tmp_dir = os.path.join(TMP_DIR, safe_id)
+    if os.path.isdir(tmp_dir):
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    out_dir = os.path.join(OUTPUT_DIR, folder)
+    if os.path.isdir(out_dir):
+        for f in os.listdir(out_dir):
+            if f.startswith(name_no_ext):
+                try:
+                    os.remove(os.path.join(out_dir, f))
+                except Exception:
+                    pass
+
+    return {"message": f"File '{filename}' deleted", "video_id": video_id}
 
 
 @router.get("/stream/{folder}/{filename}")

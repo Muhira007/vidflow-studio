@@ -7,6 +7,7 @@ export default function ConfigCaption() {
   const [fontName, setFontName] = useState('DejaVu Sans');
   const [fontSize, setFontSize] = useState(24);
   const [fontColor, setFontColor] = useState('#ffffff');
+  const [captionTemplate, setCaptionTemplate] = useState('classic');
   const [outlineEnabled, setOutlineEnabled] = useState(true);
   const [outlineSize, setOutlineSize] = useState(2);
   const [outlineColor, setOutlineColor] = useState('#000000');
@@ -16,6 +17,12 @@ export default function ConfigCaption() {
   const [socialTone, setSocialTone] = useState('Santai & Gaul (Gen-Z)');
   const [loading, setLoading] = useState(true);
 
+  const templates = [
+    { id: 'classic', label: 'Classic', desc: 'Teks polos biasa' },
+    { id: 'karaoke_yellow', label: 'Karaoke Yellow', desc: 'Sorotan kata warna kuning ala CapCut' },
+    { id: 'karaoke_green', label: 'Karaoke Green', desc: 'Sorotan kata warna hijau neon' }
+  ];
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -23,6 +30,7 @@ export default function ConfigCaption() {
   const fetchSettings = async () => {
     try {
       const res = await api.get('/videos/settings/caption');
+      if (res.data.caption_template) setCaptionTemplate(res.data.caption_template);
       if (res.data.caption_font) setFontName(res.data.caption_font);
       if (res.data.caption_size) setFontSize(res.data.caption_size);
       if (res.data.caption_color) setFontColor(res.data.caption_color);
@@ -42,7 +50,8 @@ export default function ConfigCaption() {
 
   const handleSave = async () => {
     try {
-      await api.post('/videos/settings/caption', { 
+      const payload = {
+        caption_template: captionTemplate,
         caption_font: fontName,
         caption_size: fontSize,
         caption_color: fontColor,
@@ -50,13 +59,22 @@ export default function ConfigCaption() {
         caption_outline_size: outlineSize,
         caption_outline: outlineColor,
         caption_position: position,
-        caption_social_max_words: parseInt(socialMaxWords),
-        caption_social_hashtags: parseInt(socialHashtags),
+        caption_social_max_words: parseInt(socialMaxWords) || 40,
+        caption_social_hashtags: parseInt(socialHashtags) || 5,
         caption_social_tone: socialTone
-      });
+      };
+      console.log('[ConfigCaption] Saving:', payload);
+      const res = await api.post('/videos/settings/caption', payload);
+      console.log('[ConfigCaption] Response:', res.data);
       toast.success('Pengaturan Caption & Sosial Media berhasil disimpan!');
     } catch (err) {
-      toast.error('Gagal menyimpan pengaturan: ' + err.message);
+      const msg = err.response?.data?.detail || err.response?.data?.message || err.message || 'Unknown error';
+      console.error('[ConfigCaption] Save error:', err);
+      if (err.response) {
+        console.error('[ConfigCaption] Status:', err.response.status);
+        console.error('[ConfigCaption] Data:', err.response.data);
+      }
+      toast.error('Gagal menyimpan: ' + String(msg));
     }
   };
 
@@ -67,10 +85,42 @@ export default function ConfigCaption() {
       <h1 className="page-title">Auto Caption Configuration</h1>
       <p className="page-subtitle">Atur gaya tampilan subtitle/caption otomatis untuk video Anda.</p>
 
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ marginBottom: '20px' }}>Pilihan Template</h3>
+        <div className="grid-cols-3">
+          {templates.map(tpl => {
+            const isActive = tpl.id === captionTemplate;
+            return (
+              <div 
+                key={tpl.id}
+                className={`card ${isActive ? 'active-template' : ''}`}
+                style={{ 
+                  cursor: 'pointer', 
+                  border: isActive ? '2px solid var(--accent-primary)' : '1px solid transparent',
+                  background: 'var(--bg-secondary)',
+                  transition: 'all 0.2s',
+                  padding: '20px'
+                }}
+                onClick={() => setCaptionTemplate(tpl.id)}
+              >
+                <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '8px', color: isActive ? 'var(--accent-primary)' : 'inherit' }}>
+                  {tpl.label}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{tpl.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <h3 style={{ marginBottom: '20px' }}>Pengaturan Tambahan (Opsional)</h3>
       <div className="card glass-panel grid-cols-2">
         <div className="form-group">
-          <label className="form-label">Jenis Font</label>
+          <label className="form-label">Jenis Font (Override Template)</label>
           <select className="form-control" value={fontName} onChange={e => setFontName(e.target.value)}>
+            <option value="The Bold Font">The Bold Font (Default CapCut)</option>
+            <option value="Impact">Impact</option>
+            <option value="Arial Black">Arial Black</option>
             <option value="DejaVu Sans">DejaVu Sans</option>
             <option value="Ubuntu">Ubuntu</option>
             <option value="Ubuntu Sans">Ubuntu Sans</option>

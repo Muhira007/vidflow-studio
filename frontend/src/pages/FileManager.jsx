@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2, Edit3, Image as ImageIcon, Play, X } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
@@ -23,6 +24,7 @@ export default function FileManager() {
   const [newFolderName, setNewFolderName] = useState('');
 
   // Video Player State
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, targets }
   const [showPlayer, setShowPlayer] = useState(false);
   const [playerVideoUrl, setPlayerVideoUrl] = useState('');
   const [playerVideoName, setPlayerVideoName] = useState('');
@@ -146,16 +148,19 @@ export default function FileManager() {
     setPlayerVideoName('');
   };
 
-  // Close player on Escape key
+  // Close modals on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showPlayer) {
-        closeVideoPlayer();
+      if (e.key === 'Escape') {
+        if (showPlayer) closeVideoPlayer();
+        else if (deleteConfirm) setDeleteConfirm(null);
+        else if (showRenameModal) setShowRenameModal(false);
+        else if (showCreateModal) setShowCreateModal(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showPlayer]);
+  }, [showPlayer, deleteConfirm, showRenameModal, showCreateModal]);
 
   const handleContextMenu = (e, type, target) => {
     e.preventDefault();
@@ -235,28 +240,47 @@ export default function FileManager() {
     }
   };
 
-  const handleDelete = async (target, type) => {
-    const targetsToDelete = selectedItems.includes(target) && selectedItems.length > 1 
-      ? selectedItems 
+  const handleDelete = (target, type) => {
+    // If multiple items are selected and target is among them, delete all selected
+    const targetsToDelete = selectedItems.includes(target) && selectedItems.length > 1
+      ? selectedItems
       : [target];
 
-    if (!confirm(`Yakin ingin menghapus ${targetsToDelete.length} item? Tindakan ini permanen.`)) return;
+    setDeleteConfirm({ type, targets: targetsToDelete, folder: currentFolder });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteConfirm) return;
+    const { targets, folder } = deleteConfirm;
+    setDeleteConfirm(null);
+
+    let success = 0;
+    let failed = 0;
     try {
-      for (const t of targetsToDelete) {
-        if (currentFolder === null) {
-          await api.delete(`/fs/delete/${t}`);
-          try { await api.delete(`/videos/${t}`); } catch(e) {}
-        } else {
-          await api.delete(`/fs/delete_file/${currentFolder}/${t}`);
+      for (const t of targets) {
+        try {
+          if (folder === null) {
+            await api.delete(`/fs/delete/${t}`);
+            try { await api.delete(`/videos/${t}`); } catch(e) {}
+          } else {
+            await api.delete(`/fs/delete_file/${folder}/${t}`);
+          }
+          success++;
+        } catch (e) {
+          failed++;
         }
       }
-      toast.success("Berhasil dihapus");
+      if (failed === 0) {
+        toast.success(`${success} item berhasil dihapus`);
+      } else {
+        toast.error(`${success} berhasil, ${failed} gagal`);
+      }
       setSelectedItems([]);
       setIsMobileSelectionMode(false);
       setContextMenu({...contextMenu, visible: false});
       fetchItems();
     } catch (error) {
-      toast.error("Gagal menghapus sebagian/seluruh item");
+      toast.error("Gagal menghapus item");
     }
   };
 
@@ -297,35 +321,50 @@ export default function FileManager() {
   };
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
     if (!currentFolder) {
       toast.error("Harap masuk ke dalam folder dulu untuk upload");
       return;
     }
-    
-    const formData = new FormData();
-    formData.append('video_id', currentFolder);
-    formData.append('file', file);
 
-    const loadingToast = toast.loading(`Mengupload ${file.name}...`);
-    try {
-      await api.post('/videos/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      toast.success("Upload selesai!", { id: loadingToast });
-      fetchItems();
-    } catch (error) {
-      toast.error("Upload gagal", { id: loadingToast });
+    let success = 0;
+    let failed = 0;
+    const loadingToast = toast.loading(`Mengupload ${files.length} file ke ${currentFolder}... (0/${files.length})`);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append('video_id', currentFolder);
+      formData.append('file', file);
+
+      try {
+        await api.post('/videos/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        success++;
+      } catch (error) {
+        failed++;
+        console.error(`Gagal upload ${file.name}:`, error);
+      }
+      // Update progress
+      toast.loading(`Mengupload ${files.length} file ke ${currentFolder}... (${i + 1}/${files.length})`, { id: loadingToast });
     }
+
+    if (failed === 0) {
+      toast.success(`${success} file berhasil diupload!`, { id: loadingToast });
+    } else {
+      toast.error(`${success} berhasil, ${failed} gagal`, { id: loadingToast });
+    }
+    fetchItems();
     e.target.value = null;
   };
 
   const handleDrop = async (e, targetFolder) => {
     e.preventDefault();
     e.stopPropagation();
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
 
     const folderId = targetFolder || currentFolder;
     if (!folderId) {
@@ -333,20 +372,34 @@ export default function FileManager() {
        return;
     }
 
-    const formData = new FormData();
-    formData.append('video_id', folderId);
-    formData.append('file', file);
+    let success = 0;
+    let failed = 0;
+    const loadingToast = toast.loading(`Mengupload ${files.length} file ke ${folderId}... (0/${files.length})`);
 
-    const loadingToast = toast.loading(`Mengupload ${file.name} ke ${folderId}...`);
-    try {
-      await api.post('/videos/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      toast.success("Upload selesai!", { id: loadingToast });
-      fetchItems();
-    } catch (error) {
-      toast.error("Upload gagal", { id: loadingToast });
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append('video_id', folderId);
+      formData.append('file', file);
+
+      try {
+        await api.post('/videos/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        success++;
+      } catch (error) {
+        failed++;
+        console.error(`Gagal upload ${file.name}:`, error);
+      }
+      toast.loading(`Mengupload ${files.length} file ke ${folderId}... (${i + 1}/${files.length})`, { id: loadingToast });
     }
+
+    if (failed === 0) {
+      toast.success(`${success} file berhasil diupload ke ${folderId}!`, { id: loadingToast });
+    } else {
+      toast.error(`${success} berhasil, ${failed} gagal`, { id: loadingToast });
+    }
+    fetchItems();
   };
 
   const allowDrop = (e) => {
@@ -372,7 +425,7 @@ export default function FileManager() {
       onDragOver={allowDrop}
       onDrop={(e) => handleDrop(e, currentFolder)}
     >
-      <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
+      <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} multiple />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }} onClick={(e) => e.stopPropagation()}>
         <div>
@@ -534,6 +587,57 @@ export default function FileManager() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '20px'
+        }}>
+          <div className="card glass-panel" style={{ maxWidth: '440px', width: '100%', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: 'var(--danger)' }}>
+              <AlertTriangle size={28} />
+              <h3 style={{ margin: 0 }}>Konfirmasi Penghapusan</h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.6' }}>
+              Yakin ingin menghapus <strong style={{ color: 'var(--danger)' }}>HARD DELETE</strong>{' '}
+              <strong style={{ color: 'var(--text-primary)' }}>{deleteConfirm.targets.length} item</strong>?
+            </p>
+            <div style={{
+              background: 'rgba(255,255,255,0.05)', borderRadius: '8px',
+              padding: '12px', marginBottom: '20px', maxHeight: '150px', overflowY: 'auto'
+            }}>
+              {deleteConfirm.targets.map((t, i) => (
+                <div key={i} style={{
+                  fontFamily: 'monospace', fontSize: '0.85rem',
+                  color: 'var(--text-secondary)', padding: '4px 0',
+                  borderBottom: i < deleteConfirm.targets.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                  wordBreak: 'break-all', overflowWrap: 'anywhere',
+                  overflow: 'hidden',
+                }}>
+                  {deleteConfirm.folder === null ? '📁' : '🎬'} {deleteConfirm.folder !== null && deleteConfirm.folder + '/'}{t}
+                </div>
+              ))}
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '24px' }}>
+              Tindakan ini akan menghapus data dari <b>Database</b> dan <b>Source Folder</b>. Aksi ini tidak dapat dibatalkan!
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>
+                Batal
+              </button>
+              <button className="btn btn-primary" style={{
+                background: 'var(--danger)', border: 'none',
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+              }} onClick={executeDelete}>
+                <Trash2 size={16} /> Ya, Hapus!
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

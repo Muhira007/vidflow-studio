@@ -46,6 +46,40 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ── Global text-overflow prevention ── */
+table, th, td {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.data-table td {
+  max-width: 0;  /* force table-layout to respect text wrapping */
+}
+
+code, pre, .monospace, [style*="monospace"] {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.badge, .badge-primary, .badge-success, .badge-warning, .badge-danger, .badge-secondary {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.modal-content, .glass-panel, .card {
+  overflow: hidden;
+}
+
+/* Force all inputs to not overflow their containers */
+input, textarea, select {
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 body {

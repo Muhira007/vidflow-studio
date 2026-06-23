@@ -25,11 +25,21 @@ def list_outputs(db: Session = Depends(get_db)):
 
     results = []
     for v in videos:
-        output_folder = os.path.join(OUTPUT_DIR, v.id)
+        # ID format: "FOLDER/filename" — grup = folder, name = filename
+        if "/" in v.id:
+            group, file_name = v.id.split("/", 1)
+        else:
+            group = v.source_folder or v.id
+            file_name = v.id
+
+        output_folder = os.path.join(OUTPUT_DIR, group)
         video_file = None
         cover_file = None
         if os.path.isdir(output_folder):
             for f in os.listdir(output_folder):
+                # Cek prefix: file_name_1080p.mp4 atau file_name_cover.jpg
+                if not f.startswith(file_name):
+                    continue
                 path = os.path.join(output_folder, f)
                 if os.path.isfile(path):
                     size_bytes = os.path.getsize(path)
@@ -39,7 +49,9 @@ def list_outputs(db: Session = Depends(get_db)):
                         cover_file = {"name": f, "size_bytes": size_bytes}
 
         results.append({
-            "id": v.id,
+            "id": file_name,  # tampil nama file saja di UI
+            "group": group,
+            "full_id": v.id,
             "status": v.status.value if v.status else "completed",
             "resolution": v.resolution,
             "has_caption": bool(v.caption_text),
@@ -54,7 +66,7 @@ def list_outputs(db: Session = Depends(get_db)):
     return results
 
 
-@router.get("/{video_id}/caption")
+@router.get("/{video_id:path}/caption")
 def get_caption(video_id: str, format: str = "plain", db: Session = Depends(get_db)):
     """Return the caption text for a completed video.
 
@@ -92,7 +104,7 @@ def get_caption(video_id: str, format: str = "plain", db: Session = Depends(get_
     }
 
 
-@router.get("/{video_id}/social-caption")
+@router.get("/{video_id:path}/social-caption")
 def get_social_caption(video_id: str, db: Session = Depends(get_db)):
     """Return the AI-generated social-media caption. Generates on-demand if missing."""
     video = db.query(Video).filter(Video.id == video_id).first()
@@ -135,20 +147,21 @@ def get_social_caption(video_id: str, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/{video_id}/download")
+@router.get("/{video_id:path}/download")
 def download_output(video_id: str, db: Session = Depends(get_db)):
     """Download the rendered output video file."""
     video = db.query(Video).filter(Video.id == video_id).first()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    output_folder = os.path.join(OUTPUT_DIR, video_id)
+    out_folder = video.source_folder or video_id
+    output_folder = os.path.join(OUTPUT_DIR, out_folder)
     if not os.path.isdir(output_folder):
         raise HTTPException(status_code=404, detail="Output folder not found")
 
-    # Cari file .mp4 di folder output
+    # Cari file .mp4 dengan prefix video_id
     for f in os.listdir(output_folder):
-        if f.lower().endswith((".mp4", ".webm", ".mkv")):
+        if f.startswith(video_id) and f.lower().endswith((".mp4", ".webm", ".mkv")):
             file_path = os.path.join(output_folder, f)
             return FileResponse(
                 file_path,
@@ -160,7 +173,7 @@ def download_output(video_id: str, db: Session = Depends(get_db)):
     raise HTTPException(status_code=404, detail="No output video file found")
 
 
-@router.patch("/{video_id}/toggle-uploaded")
+@router.patch("/{video_id:path}/toggle-uploaded")
 def toggle_uploaded(video_id: str, db: Session = Depends(get_db)):
     """Toggle the 'uploaded to social media' status."""
     video = db.query(Video).filter(Video.id == video_id).first()
@@ -179,7 +192,7 @@ def toggle_uploaded(video_id: str, db: Session = Depends(get_db)):
     }
 
 
-@router.delete("/{video_id}")
+@router.delete("/{video_id:path}")
 def delete_output(video_id: str, db: Session = Depends(get_db)):
     """Delete video from database and all associated files (source, tmp, output)."""
     video = db.query(Video).filter(Video.id == video_id).first()
@@ -191,13 +204,39 @@ def delete_output(video_id: str, db: Session = Depends(get_db)):
     db.delete(video)
     db.commit()
 
-    # Hapus folder fisik
-    for folder in ["source", "tmp", "output"]:
-        target_dir = os.path.join(BASE_DIR, folder, video_id)
-        if os.path.exists(target_dir):
-            try:
-                shutil.rmtree(target_dir)
-            except Exception as e:
-                print(f"Failed to delete {target_dir}: {e}")
+    # Parse folder & file name dari video_id (format: "FOLDER/filename")
+    if "/" in video_id:
+        src_folder, file_name = video_id.split("/", 1)
+    else:
+        src_folder = video.source_folder or video_id
+        file_name = video_id
 
-    return {"message": f"Video {video_id} and all associated files have been deleted."}
+    # ⚠️ Source file TIDAK dihapus — user bisa re-process nanti
+
+    # Output files — match by file_name prefix (e.g. nama_video_1080p.mp4)
+    out_dir = os.path.join(OUTPUT_DIR, src_folder)
+    if os.path.isdir(out_dir):
+        for f in os.listdir(out_dir):
+            if f.startswith(file_name):
+                try:
+                    os.remove(os.path.join(out_dir, f))
+                except Exception as e:
+                    print(f"Failed to delete output: {e}")
+        # Remove folder if empty after file deletion
+        try:
+            remaining = os.listdir(out_dir)
+            if not remaining:
+                os.rmdir(out_dir)
+        except Exception:
+            pass
+
+    # Tmp folder — safe_id replaces / with _
+    safe_id = video_id.replace("/", "_")
+    tmp_dir = os.path.join(TMP_DIR, safe_id)
+    if os.path.isdir(tmp_dir):
+        try:
+            shutil.rmtree(tmp_dir)
+        except Exception as e:
+            print(f"Failed to delete tmp: {e}")
+
+    return {"message": f"Output {video_id} dihapus. Source file tetap utuh untuk re-process."}

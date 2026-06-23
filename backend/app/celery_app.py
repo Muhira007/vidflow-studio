@@ -15,4 +15,8 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="Asia/Jakarta",
     enable_utc=True,
+    # ── Sequential processing: one task at a time ──
+    worker_prefetch_multiplier=1,   # only fetch 1 task per worker
+    task_acks_late=True,            # acknowledge AFTER completion (not before)
+    task_track_started=True,
 )

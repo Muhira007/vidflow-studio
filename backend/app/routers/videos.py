@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
-from app.models import Video, JobLog
+from app.models import Video, JobLog, ProductGroup, VideoStatus
 from app.schemas import VideoResponse, VideoDetailResponse
 from app.tasks import process_video_pipeline
 
@@ -12,23 +12,6 @@ router = APIRouter()
 def get_videos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     videos = db.query(Video).offset(skip).limit(limit).all()
     return videos
-
-@router.get("/{video_id}", response_model=VideoDetailResponse)
-def get_video_detail(video_id: str, db: Session = Depends(get_db)):
-    video = db.query(Video).filter(Video.id == video_id).first()
-    if not video:
-        raise HTTPException(status_code=404, detail="Video not found")
-    return video
-
-@router.post("/{video_id}/process")
-def process_video(video_id: str, db: Session = Depends(get_db)):
-    video = db.query(Video).filter(Video.id == video_id).first()
-    if not video:
-        raise HTTPException(status_code=404, detail="Video not found")
-    
-    # Trigger celery task
-    task = process_video_pipeline.delay(video_id)
-    return {"message": f"Processing started for video {video_id}", "task_id": task.id}
 
 import json
 import os
@@ -41,6 +24,7 @@ def get_global_settings():
             return json.load(f)
     return {"resolution": "1080p"}
 
+# ── Settings routes MUST be before /{video_id:path} wildcard ──
 @router.get("/settings/render")
 def read_settings():
     return get_global_settings()
@@ -96,12 +80,58 @@ def update_cover_settings(settings: dict):
         json.dump(current, f)
     return {"message": "Cover settings updated"}
 
+# ── Video detail (wildcard) — MUST be after all specific routes ──
+@router.get("/{video_id:path}", response_model=VideoDetailResponse)
+def get_video_detail(video_id: str, db: Session = Depends(get_db)):
+    video = db.query(Video).filter(Video.id == video_id).first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    return video
+
+@router.post("/{folder}/{name}/process")
+def process_video(folder: str, name: str, db: Session = Depends(get_db)):
+    video_id = f"{folder}/{name}"
+    video = db.query(Video).filter(Video.id == video_id).first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    # Trigger celery task
+    task = process_video_pipeline.delay(video_id)
+    # Simpan task ID untuk keperluan cancel
+    video.celery_task_id = task.id
+    db.commit()
+    return {"message": f"Processing started for video {video_id}", "task_id": task.id}
+
+
+@router.post("/{video_id:path}/cancel")
+def cancel_processing(video_id: str, db: Session = Depends(get_db)):
+    """Cancel a running/pending pipeline task."""
+    video = db.query(Video).filter(Video.id == video_id).first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if video.status != VideoStatus.PROCESSING:
+        raise HTTPException(status_code=400, detail=f"Video saat ini status '{video.status.value}', bukan 'processing'")
+
+    task_id = video.celery_task_id
+
+    # Set status langsung — pipeline akan membaca ini & berhenti
+    video.status = VideoStatus.CANCELLED
+    db.commit()
+
+    # Revoke Celery task (kalau masih di antrian)
+    if task_id:
+        from app.tasks import celery_app
+        celery_app.control.revoke(task_id, terminate=True)
+
+    return {"message": f"Processing untuk {video_id} telah dibatalkan", "task_id": task_id}
+
 @router.post("/sync")
 def sync_videos(db: Session = Depends(get_db)):
     source_dir = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
     if not os.path.exists(source_dir):
         return {"message": "Source directory does not exist", "added": 0}
-        
+
     settings = get_global_settings()
     res = settings.get("resolution", "1080p")
     cut_level = settings.get("silence_cut_level", 2)
@@ -109,27 +139,51 @@ def sync_videos(db: Session = Depends(get_db)):
     min_dur = settings.get("min_silence_duration", 0.5)
     padding = settings.get("silence_padding", 150)
     cover_template = settings.get("cover_template", "default")
-        
+
+    import random
+    import string
+
     added = 0
-    for item in os.listdir(source_dir):
-        item_path = os.path.join(source_dir, item)
-        if os.path.isdir(item_path):
-            # Check if video already in db
-            existing = db.query(Video).filter(Video.id == item).first()
-            if not existing:
-                new_vid = Video(
-                    id=item,
-                    status="PENDING",
-                    silence_cut_level=cut_level,
-                    silence_threshold=threshold,
-                    min_silence_duration=min_dur,
-                    silence_padding=padding,
-                    cover_template=cover_template,
-                    resolution=res
-                )
-                db.add(new_vid)
-                added += 1
-    
+    for folder_name in os.listdir(source_dir):
+        folder_path = os.path.join(source_dir, folder_name)
+        if not os.path.isdir(folder_path):
+            continue
+
+        # Auto-create ProductGroup if this folder is new
+        existing_group = db.query(ProductGroup).filter(ProductGroup.id == folder_name).first()
+        if not existing_group:
+            db.add(ProductGroup(id=folder_name, product_name=""))
+            db.flush()
+
+        # Scan file .mp4 dalam folder
+        for file_name in os.listdir(folder_path):
+            if not file_name.lower().endswith(('.mp4', '.mov', '.mkv', '.avi', '.webm')):
+                continue
+
+            # ID = folder/nama_file (tanpa ekstensi) — unique & menunjukkan grup
+            name_no_ext = os.path.splitext(file_name)[0]
+            video_id = f"{folder_name}/{name_no_ext}"
+
+            existing = db.query(Video).filter(Video.id == video_id).first()
+            if existing:
+                continue
+
+            new_vid = Video(
+                id=video_id,
+                status="PENDING",
+                silence_cut_level=cut_level,
+                silence_threshold=threshold,
+                min_silence_duration=min_dur,
+                silence_padding=padding,
+                cover_template=cover_template,
+                resolution=res,
+                source_folder=folder_name,
+                source_filename=file_name,
+            )
+            db.add(new_vid)
+            db.flush()  # simpan segera agar seq number berikutnya terhitung
+            added += 1
+
     if added > 0:
         db.commit()
     return {"message": f"Synced successfully", "added": added}
@@ -137,7 +191,7 @@ def sync_videos(db: Session = Depends(get_db)):
 import shutil
 from fastapi import File, UploadFile, Form
 
-@router.delete("/{video_id}")
+@router.delete("/{video_id:path}")
 def delete_video(video_id: str, db: Session = Depends(get_db)):
     video = db.query(Video).filter(Video.id == video_id).first()
     if not video:
@@ -150,17 +204,59 @@ def delete_video(video_id: str, db: Session = Depends(get_db)):
     db.delete(video)
     db.commit()
     
-    # Delete physical folders
+    # Delete physical files
     base_dir = "/home/kangdemuh/aplikasi/video-editor/claude2"
-    for folder in ["source", "tmp", "output"]:
-        target_dir = os.path.join(base_dir, folder, video_id)
-        if os.path.exists(target_dir):
+    src_folder = video.source_folder or video_id
+
+    # Parse file name dari video_id (format: "FOLDER/filename")
+    if "/" in video_id:
+        _, file_name = video_id.split("/", 1)
+    else:
+        file_name = video_id
+
+    # Hapus file output: output/{folder}/{file_name}_*
+    out_dir = os.path.join(base_dir, "output", src_folder)
+    if os.path.isdir(out_dir):
+        for f in os.listdir(out_dir):
+            if f.startswith(file_name):
+                try:
+                    os.remove(os.path.join(out_dir, f))
+                except Exception as e:
+                    print(f"Failed to delete output file: {e}")
+        # Remove folder if empty
+        try:
+            if not os.listdir(out_dir):
+                os.rmdir(out_dir)
+        except Exception:
+            pass
+
+    # Hapus file sumber + folder source jika kosong
+    src_dir = os.path.join(base_dir, "source", src_folder)
+    if video.source_filename:
+        src_path = os.path.join(src_dir, video.source_filename)
+        if os.path.isfile(src_path):
             try:
-                shutil.rmtree(target_dir)
+                os.remove(src_path)
             except Exception as e:
-                print(f"Failed to delete {target_dir}: {e}")
-                
-    return {"message": f"Video {video_id} and its folders have been deleted."}
+                print(f"Failed to delete source file: {e}")
+    # Remove empty source folder
+    if os.path.isdir(src_dir):
+        try:
+            if not os.listdir(src_dir):
+                os.rmdir(src_dir)
+        except Exception:
+            pass
+
+    # Hapus folder tmp — safe_id replaces / with _
+    safe_id = video_id.replace("/", "_")
+    tmp_dir = os.path.join(base_dir, "tmp", safe_id)
+    if os.path.isdir(tmp_dir):
+        try:
+            shutil.rmtree(tmp_dir)
+        except Exception as e:
+            print(f"Failed to delete tmp dir: {e}")
+
+    return {"message": f"Video {video_id} and its files have been deleted."}
 
 @router.post("/upload")
 async def upload_video(video_id: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -169,14 +265,23 @@ async def upload_video(video_id: str = Form(...), file: UploadFile = File(...), 
     
     # Create folder if it doesn't exist
     os.makedirs(target_dir, exist_ok=True)
-    
+
+    # Auto-create ProductGroup if folder is new
+    existing_group = db.query(ProductGroup).filter(ProductGroup.id == video_id).first()
+    if not existing_group:
+        db.add(ProductGroup(id=video_id, product_name=""))
+        db.flush()
+
     # Save file
     file_location = os.path.join(target_dir, file.filename)
     with open(file_location, "wb+") as file_object:
         shutil.copyfileobj(file.file, file_object)
         
-    # Check if video already in db
-    existing = db.query(Video).filter(Video.id == video_id).first()
+    # Generate ID: folder/nama_file
+    name_no_ext = os.path.splitext(file.filename)[0]
+    gen_id = f"{video_id}/{name_no_ext}"
+
+    existing = db.query(Video).filter(Video.id == gen_id).first()
     if not existing:
         settings = get_global_settings()
         res = settings.get("resolution", "1080p")
@@ -187,17 +292,20 @@ async def upload_video(video_id: str = Form(...), file: UploadFile = File(...), 
         cover_template = settings.get("cover_template", "default")
 
         new_vid = Video(
-            id=video_id,
+            id=gen_id,
             status="PENDING",
             silence_cut_level=cut_level,
             silence_threshold=threshold,
             min_silence_duration=min_dur,
             silence_padding=padding,
             cover_template=cover_template,
-            resolution=res
+            resolution=res,
+            source_folder=video_id,  # video_id = nama folder
+            source_filename=file.filename,
         )
         db.add(new_vid)
         db.commit()
+        return {"message": "Video uploaded successfully", "video_id": gen_id}
         
-    return {"message": "Video uploaded successfully", "video_id": video_id}
+    return {"message": "Video already exists", "video_id": gen_id}
 

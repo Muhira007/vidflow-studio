@@ -57,7 +57,7 @@ export default function OutputList() {
   const handleCopySocialCaption = async (videoId) => {
     const loadingToast = toast.loading('Mengenerate caption AI...');
     try {
-      const res = await api.get(`/outputs/${encodeURIComponent(videoId)}/social-caption`);
+      const res = await api.get(`/outputs/${videoId}/social-caption`);
       const text = res.data?.caption_social;
       toast.dismiss(loadingToast);
       if (text) {
@@ -81,14 +81,14 @@ export default function OutputList() {
   };
 
   const handleDownload = (videoId) => {
-    const url = `${API_BASE}/outputs/${encodeURIComponent(videoId)}/download`;
+    const url = `${API_BASE}/outputs/${videoId}/download`;
     // Buka di tab baru untuk trigger download
     window.open(url, '_blank');
   };
 
   const handleToggleUploaded = async (videoId) => {
     try {
-      const res = await api.patch(`/outputs/${encodeURIComponent(videoId)}/toggle-uploaded`);
+      const res = await api.patch(`/outputs/${videoId}/toggle-uploaded`);
       const newStatus = res.data?.uploaded_to_social;
       toast.success(newStatus ? 'Ditandai: sudah diupload ke sosmed ✓' : 'Ditandai: belum diupload');
       fetchOutputs();
@@ -100,7 +100,7 @@ export default function OutputList() {
   const executeDelete = async (videoId) => {
     setDeleteTarget(null);
     try {
-      await api.delete(`/outputs/${encodeURIComponent(videoId)}`);
+      await api.delete(`/outputs/${videoId}`);
       toast.success(`Video ${videoId} berhasil dihapus!`);
       fetchOutputs();
     } catch (error) {
@@ -133,7 +133,7 @@ export default function OutputList() {
 
   // Video player — pakai fs/stream agar video di-play inline (bukan download)
   const openVideoPlayer = (videoId, videoFileName) => {
-    const url = `${API_BASE}/fs/stream/${encodeURIComponent(videoId)}/${encodeURIComponent(videoFileName)}`;
+    const url = `${API_BASE}/fs/stream/${videoId}/${encodeURIComponent(videoFileName)}`;
     setPlayerVideoUrl(url);
     setPlayerVideoName(videoId);
     setShowPlayer(true);
@@ -253,12 +253,12 @@ export default function OutputList() {
                         background: 'var(--bg-tertiary)',
                         display: 'inline-block'
                       }}
-                      onClick={() => out.video_file && openVideoPlayer(out.id, out.video_file.name)}
+                      onClick={() => out.video_file && openVideoPlayer(out.group || out.id, out.video_file.name)}
                       title={out.video_file ? 'Klik untuk preview video' : 'Tidak ada file video'}
                     >
                       {out.cover_file ? (
                         <img
-                          src={`${API_BASE}/fs/stream/${encodeURIComponent(out.id)}/${encodeURIComponent(out.cover_file.name)}`}
+                          src={`${API_BASE}/fs/stream/${encodeURIComponent(out.group || out.id)}/${encodeURIComponent(out.cover_file.name)}`}
                           alt={out.id}
                           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           onError={(e) => { e.target.style.display = 'none'; }}
@@ -285,9 +285,14 @@ export default function OutputList() {
                     </div>
                   </td>
 
-                  {/* ID Video */}
+                  {/* ID Video + Group */}
                   <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>
                     {out.id}
+                    {out.group && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 400, opacity: 0.7 }}>
+                        📁 {out.group}
+                      </div>
+                    )}
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
                       {out.resolution} · {out.video_file ? formatSize(out.video_file.size_bytes) : '-'}
                     </div>
@@ -297,7 +302,7 @@ export default function OutputList() {
                   <td style={{ padding: '16px 12px', textAlign: 'center' }}>
                     {out.has_caption ? (
                       <button
-                        onClick={() => handleCopySocialCaption(out.id)}
+                        onClick={() => handleCopySocialCaption(out.full_id)}
                         className="btn btn-primary"
                         style={{
                           padding: '5px 12px', fontSize: '0.82rem',
@@ -322,7 +327,7 @@ export default function OutputList() {
                   {/* Download */}
                   <td style={{ padding: '16px 12px', textAlign: 'center' }}>
                     <button
-                      onClick={() => handleDownload(out.id)}
+                      onClick={() => handleDownload(out.full_id)}
                       className="btn btn-primary"
                       style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none' }}
                       disabled={!out.video_file}
@@ -334,7 +339,7 @@ export default function OutputList() {
                   {/* Uploaded to Sosmed Toggle */}
                   <td style={{ padding: '16px 12px', textAlign: 'center' }}>
                     <button
-                      onClick={() => handleToggleUploaded(out.id)}
+                      onClick={() => handleToggleUploaded(out.full_id)}
                       className="btn"
                       style={{
                         padding: '6px 14px',
@@ -363,7 +368,7 @@ export default function OutputList() {
                   {/* Delete */}
                   <td style={{ padding: '16px 12px', textAlign: 'center' }}>
                     <button
-                      onClick={() => setDeleteTarget(out.id)}
+                      onClick={() => setDeleteTarget(out.full_id)}
                       className="btn btn-danger"
                       style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }}
                       title="Hapus video"

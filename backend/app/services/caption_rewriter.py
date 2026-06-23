@@ -44,6 +44,7 @@ def generate_social_caption(
     hashtag_count: int = 5,
     tone: str = "casual",
     language: str = "indonesian",
+    product_context: dict | None = None,
 ) -> str:
     """
     Generate caption siap upload sosmed dari transkrip SRT.
@@ -65,7 +66,40 @@ def generate_social_caption(
 
     client = _get_client()
 
-    prompt = f"""Kamu adalah asisten kreator konten. Ubah transkrip video berikut menjadi caption sosial media yang menarik.
+    # Build product context block for AI prompt
+    product_block = ""
+    if product_context and product_context.get("product_name"):
+        name = product_context["product_name"]
+        desc = product_context.get("product_description", "")
+        product_block = f"""
+PRODUK YANG DIJUAL: {name}
+{f"Deskripsi: {desc}" if desc else ""}
+
+"""
+        # Product-aware prompt: product is PRIMARY, transcript is supporting
+        prompt = f"""Kamu adalah copywriter yang jago bikin caption jualan.
+
+{product_block}
+Di bawah ini adalah transkrip suara video yang sedang mempromosikan produk di atas.
+Gunakan transkrip HANYA sebagai bahan pendukung — fokus utama caption harus MENJUAL produk.
+Jangan hanya meringkas transkrip, tapi buat caption PERSUASIF yang bikin orang mau beli.
+
+ATURAN:
+- Maksimal {max_words} kata untuk caption utama
+- Sertakan tepat {hashtag_count} hashtag yang relevan di bagian bawah
+- Gaya bahasa: {tone}
+- Bahasa: {language}
+- Gunakan emoji secukupnya (2-4 emoji)
+- Format output: caption dulu, lalu hashtag di baris terpisah
+- WAJIB menyebutkan nama produk "**{name}**" di dalam caption
+
+TRANSKRIP (bahan pendukung):
+{plain_text}
+
+CAPTION:"""
+    else:
+        # No product context — fallback to transcript-only
+        prompt = f"""Kamu adalah asisten kreator konten. Ubah transkrip video berikut menjadi caption sosial media yang menarik.
 
 ATURAN:
 - Maksimal {max_words} kata untuk caption utama
@@ -101,6 +135,7 @@ def generate_cover_title(
     max_words: int = 5,
     style: str = "Santai & Gaul (Gen-Z)",
     language: str = "indonesian",
+    product_context: dict | None = None,
 ) -> str:
     """
     Generate judul pendek untuk cover video dari transkrip SRT.
@@ -121,7 +156,36 @@ def generate_cover_title(
 
     client = _get_client()
 
-    prompt = f"""Buat judul video SINGKAT dari transkrip berikut.
+    # Build product context block for AI prompt
+    product_block = ""
+    if product_context and product_context.get("product_name"):
+        name = product_context["product_name"]
+        desc = product_context.get("product_description", "")
+        product_block = f"""
+PRODUK YANG DIJUAL: {name}
+{f"Deskripsi: {desc}" if desc else ""}
+
+"""
+        # Product-aware prompt: product is PRIMARY for the title
+        prompt = f"""Tugas: Buat judul cover {max_words} kata TENTANG PRODUK di bawah ini.
+JANGAN mengulang atau meringkas transkrip. FOKUS pada produknya!
+
+{product_block}
+Transkrip suara (ABAIIKAN, jangan diulang kata-katanya):
+{plain_text}
+
+ATURAN WAJIB:
+- Judul HARUS mengandung kata "{name}"
+- MAKSIMAL {max_words} kata — lebih pendek lebih baik
+- Gaya: {style}
+- Bahasa: {language}
+- JANGAN ulangi kata-kata dari transkrip!
+- JANGAN pakai hashtag, emoji, atau tanda kutip
+
+JUDUL ({max_words} kata max):"""
+    else:
+        # No product context — fallback to transcript-only
+        prompt = f"""Buat judul video SINGKAT dari transkrip berikut.
 
 ATURAN PENTING:
 - MAKSIMAL {max_words} kata!
@@ -140,7 +204,7 @@ JUDUL:"""
     response = client.chat.completions.create(
         model="deepseek-v4-flash",
         messages=[
-            {"role": "system", "content": "Kamu adalah ahli pembuat judul video viral. Output HANYA judul, tanpa apapun."},
+            {"role": "system", "content": "Kamu adalah ahli pembuat judul PROMOSI PRODUK. Output HANYA judul produk, jangan ulangi transkrip. Jangan beri penjelasan apapun."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.9,
@@ -151,4 +215,10 @@ JUDUL:"""
     title = response.choices[0].message.content.strip()
     # Bersihkan: hapus tanda kutip, hashtag, emoji
     title = title.strip('"\'\"').strip()
+
+    # Debug: log prompt & response
+    has_product = product_context and product_context.get("product_name")
+    print(f"[COVER-TITLE] Product: {product_context.get('product_name') if has_product else 'NONE'} → Title: \"{title}\"")
+    print(f"[COVER-TITLE] Prompt (first 200 chars): {prompt[:200]}...")
+
     return title

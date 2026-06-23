@@ -28,6 +28,10 @@ done
 unset IFS
 export PATH="${CLEANED_PATH#:}"
 
+# ── Port configuration ──
+BACKEND_PORT=8000
+FRONTEND_PORT=5173
+
 # Warna output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -72,21 +76,78 @@ else
     fi
 fi
 
+# Helper: bunuh SEMUA proses yang menggunakan port tertentu (force free)
+kill_port() {
+    local port="$1"
+    local pids
+    pids=$(fuser "$port/tcp" 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+        echo -n "(membersihkan port $port...)"
+        fuser -k "$port/tcp" 2>/dev/null || true
+        sleep 1  # tunggu socket TIME_WAIT selesai
+        echo -n " bersih) "
+    fi
+}
+
+# Helper: hapus stale PID file kalau prosesnya sudah mati
+cleanup_stale_pid() {
+    local pidfile="$1"
+    local pid
+    pid=$(cat "$pidfile" 2>/dev/null || true)
+    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$pidfile"
+    fi
+}
+
+# Helper: daemonize a command with setsid (truly detach from terminal)
+# Fallback ke nohup + disown kalau setsid tidak tersedia
+daemonize() {
+    local logfile="$1"
+    local pidfile="$2"
+    shift 2
+    if command -v setsid &>/dev/null; then
+        setsid "$@" >> "$logfile" 2>&1 &
+    else
+        nohup "$@" >> "$logfile" 2>&1 &
+        disown
+    fi
+    echo $! > "$pidfile"
+}
+
+# Helper: tunggu proses siap dengan polling (max N detik)
+wait_until_ready() {
+    local pid="$1"
+    local max_wait="$2"
+    local elapsed=0
+    local interval=1
+    while [ $elapsed -lt $max_wait ]; do
+        if kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+        sleep "$interval"
+        elapsed=$((elapsed + interval))
+    done
+    return 1
+}
+
 # ---- Backend (uvicorn) ----
-echo -n "  ⏳ Backend API (port 8000)... "
+echo -n "  ⏳ Backend API (port $BACKEND_PORT)... "
+cleanup_stale_pid "$LOGS_DIR/backend.pid"
 OLD_PID=$(cat "$LOGS_DIR/backend.pid" 2>/dev/null || true)
 if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
     echo -e "${GREEN}sudah jalan ✓${NC} (PID $OLD_PID)"
 else
+    # Bersihkan port sebelum start (bunuh zombie proses)
+    kill_port "$BACKEND_PORT"
     cd "$PROJECT_DIR/backend"
-    nohup venv/bin/uvicorn app.main:app --reload --port 8000 > "$LOGS_DIR/backend.log" 2>&1 &
-    NEW_PID=$!
-    echo $NEW_PID > "$LOGS_DIR/backend.pid"
-    sleep 3
-    if kill -0 "$NEW_PID" 2>/dev/null; then
+    daemonize "$LOGS_DIR/backend.log" "$LOGS_DIR/backend.pid" \
+        venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port "$BACKEND_PORT"
+    NEW_PID=$(cat "$LOGS_DIR/backend.pid")
+    if wait_until_ready "$NEW_PID" 8; then
         echo -e "${GREEN}berhasil start ✓${NC} (PID $NEW_PID)"
     else
         echo -e "${RED}GAGAL — cek logs/backend.log${NC}"
+        echo -e "         ${YELLOW}$(tail -5 "$LOGS_DIR/backend.log" 2>/dev/null || echo '(kosong)')${NC}"
     fi
     cd "$PROJECT_DIR"
 fi
@@ -98,11 +159,10 @@ if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
     echo -e "${GREEN}sudah jalan ✓${NC} (PID $OLD_PID)"
 else
     cd "$PROJECT_DIR/backend"
-    nohup venv/bin/celery -A app.tasks.celery_app worker --loglevel=info > "$LOGS_DIR/celery.log" 2>&1 &
-    NEW_PID=$!
-    echo $NEW_PID > "$LOGS_DIR/celery.pid"
-    sleep 2
-    if kill -0 "$NEW_PID" 2>/dev/null; then
+    daemonize "$LOGS_DIR/celery.log" "$LOGS_DIR/celery.pid" \
+        venv/bin/celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1 --prefetch-multiplier=1
+    NEW_PID=$(cat "$LOGS_DIR/celery.pid")
+    if wait_until_ready "$NEW_PID" 5; then
         echo -e "${GREEN}berhasil start ✓${NC} (PID $NEW_PID)"
     else
         echo -e "${RED}GAGAL — cek logs/celery.log${NC}"
@@ -111,20 +171,58 @@ else
 fi
 
 # ---- Frontend (Vite) ----
-echo -n "  ⏳ Frontend (port 5173)... "
+echo -n "  ⏳ Frontend (port $FRONTEND_PORT)... "
+cleanup_stale_pid "$LOGS_DIR/frontend.pid"
 OLD_PID=$(cat "$LOGS_DIR/frontend.pid" 2>/dev/null || true)
 if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-    echo -e "${GREEN}sudah jalan ✓${NC} (PID $OLD_PID)"
-else
+    # Cek apakah Vite yang berjalan masih menggunakan port yang benar
+    if fuser "$FRONTEND_PORT/tcp" 2>/dev/null | grep -q "$OLD_PID"; then
+        echo -e "${GREEN}sudah jalan ✓${NC} (PID $OLD_PID, port $FRONTEND_PORT)"
+    else
+        # PID ada tapi port salah → bunuh dan restart
+        echo -n "(port mismatch, restart...) "
+        kill -TERM -- -$(ps -o pgid= -p $OLD_PID | tr -d ' ') 2>/dev/null || kill -TERM $OLD_PID 2>/dev/null
+        sleep 1
+        kill -0 "$OLD_PID" 2>/dev/null && kill -KILL $OLD_PID 2>/dev/null || true
+        rm -f "$LOGS_DIR/frontend.pid"
+        OLD_PID=""
+    fi
+fi
+
+if [ -z "$OLD_PID" ] || ! kill -0 "$OLD_PID" 2>/dev/null; then
+    # BUNUH SEMUA proses yang pakai port frontend (zombie dari run sebelumnya)
+    kill_port "$FRONTEND_PORT"
+    # Bunuh juga port 5174 kalau ada (fallback port sebelumnya)
+    kill_port 5174
+
     cd "$PROJECT_DIR/frontend"
-    nohup npm run dev > "$LOGS_DIR/frontend.log" 2>&1 &
-    NEW_PID=$!
-    echo $NEW_PID > "$LOGS_DIR/frontend.pid"
-    sleep 4
-    if kill -0 "$NEW_PID" 2>/dev/null; then
-        echo -e "${GREEN}berhasil start ✓${NC} (PID $NEW_PID)"
+
+    # Hapus log lama supaya deteksi port aktual lebih mudah
+    > "$LOGS_DIR/frontend.log"
+
+    daemonize "$LOGS_DIR/frontend.log" "$LOGS_DIR/frontend.pid" \
+        npm run dev -- --host 0.0.0.0 --port "$FRONTEND_PORT" --strictPort
+
+    NEW_PID=$(cat "$LOGS_DIR/frontend.pid")
+    if wait_until_ready "$NEW_PID" 12; then
+        # Deteksi port aktual dari log Vite
+        ACTUAL_PORT=""
+        for i in $(seq 1 5); do
+            sleep 0.5
+            ACTUAL_PORT=$(grep -oP 'Local:\s+http://localhost:\K\d+' "$LOGS_DIR/frontend.log" 2>/dev/null | tail -1 || true)
+            [ -n "$ACTUAL_PORT" ] && break
+        done
+        if [ -n "$ACTUAL_PORT" ] && [ "$ACTUAL_PORT" != "$FRONTEND_PORT" ]; then
+            echo -e "${YELLOW}port $ACTUAL_PORT (5173 dipakai) ⚠${NC}"
+            FRONTEND_PORT="$ACTUAL_PORT"
+        else
+            ACTUAL_PORT="$FRONTEND_PORT"
+            echo -e "${GREEN}berhasil start ✓${NC} (PID $NEW_PID)"
+        fi
     else
         echo -e "${RED}GAGAL — cek logs/frontend.log${NC}"
+        echo -e "         ${YELLOW}Isi log:${NC}"
+        echo -e "         ${YELLOW}$(tail -5 "$LOGS_DIR/frontend.log" 2>/dev/null || echo '(kosong)')${NC}"
     fi
     cd "$PROJECT_DIR"
 fi
@@ -133,7 +231,7 @@ echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║         Semua service siap!             ║${NC}"
 echo -e "${CYAN}╠══════════════════════════════════════════╣${NC}"
-echo -e "${CYAN}║  Frontend : http://localhost:5173        ║${NC}"
+printf "${CYAN}║  Frontend : http://localhost:%-11s║${NC}\n" "$FRONTEND_PORT"
 echo -e "${CYAN}║  API Docs : http://localhost:8000/docs   ║${NC}"
 echo -e "${CYAN}║  Logs     : ./logs/                      ║${NC}"
 echo -e "${CYAN}║  Stop all : ./stop-all.sh                ║${NC}"

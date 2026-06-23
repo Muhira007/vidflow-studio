@@ -77,7 +77,11 @@ Cukup **double-click** shortcut yang tersedia di Desktop:
 | 🟢 **Start Video Editor.bat** | Menyalakan semua service |
 | 🔴 **Stop Video Editor.bat** | Mematikan semua service |
 
-Terminal akan terbuka dan menampilkan status tiap service. Setelah selesai, tekan sembarang tombol untuk menutup.
+> **PENTING:** Sebelum pertama kali, salin file `scripts/windows/.wslconfig` ke `C:\Users\<user>\.wslconfig`, lalu restart WSL dengan perintah `wsl --shutdown` di PowerShell. Ini mencegah WSL VM auto-shutdown sehingga service tetap berjalan meski jendela terminal ditutup.
+
+Terminal akan terbuka dan menampilkan status tiap service. **Service tetap berjalan meskipun jendela ditutup** — tekan sembarang tombol untuk menutup jendela.
+
+> **Catatan:** File `.bat` terbaru ada di `scripts/windows/` — salin ke Desktop jika diperlukan.
 
 ### Cara 2: Terminal WSL
 

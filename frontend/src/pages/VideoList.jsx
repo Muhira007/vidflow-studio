@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Filter, Play, RotateCcw, MoreHorizontal, Trash2, FolderSync, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Filter, Play, RotateCcw, MoreHorizontal, Trash2, FolderSync, AlertTriangle, CheckSquare, Square, Zap, StopCircle } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -7,6 +7,9 @@ export default function VideoList() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [videoToDelete, setVideoToDelete] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [processingSelected, setProcessingSelected] = useState(false);
+  const [detailVideo, setDetailVideo] = useState(null); // { id, data, loading }
 
   const fetchVideos = async () => {
     try {
@@ -25,6 +28,34 @@ export default function VideoList() {
     return () => clearInterval(interval);
   }, []);
 
+  // Videos that can be processed (PENDING or FAILED)
+  const processableIds = useMemo(() => {
+    return new Set(
+      videos
+        .filter(v => v.status === 'PENDING' || v.status === 'FAILED' || v.status === 'pending' || v.status === 'failed')
+        .map(v => v.id)
+    );
+  }, [videos]);
+
+  const isAllSelected = processableIds.size > 0 && [...processableIds].every(id => selectedIds.has(id));
+
+  const toggleSelect = (videoId) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(videoId)) next.delete(videoId);
+      else next.add(videoId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(processableIds));
+    }
+  };
+
   const handleProcess = async (videoId) => {
     try {
       await api.post(`/videos/${videoId}/process`);
@@ -33,6 +64,58 @@ export default function VideoList() {
     } catch (error) {
       toast.error('Gagal memulai proses: ' + (error.response?.data?.detail || error.message));
     }
+  };
+
+  const handleCancel = async (videoId) => {
+    try {
+      await api.post(`/videos/${videoId}/cancel`);
+      toast.success('Proses dibatalkan: ' + videoId);
+      fetchVideos();
+    } catch (error) {
+      toast.error('Gagal membatalkan: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const openDetail = async (videoId) => {
+    setDetailVideo({ id: videoId, data: null, loading: true });
+    try {
+      const res = await api.get(`/videos/${videoId}`);
+      setDetailVideo({ id: videoId, data: res.data, loading: false });
+    } catch (err) {
+      toast.error('Gagal memuat detail');
+      setDetailVideo(null);
+    }
+  };
+
+  const handleProcessSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setProcessingSelected(true);
+    const ids = [...selectedIds];
+    setSelectedIds(new Set());
+
+    let success = 0;
+    let failed = 0;
+    const loadingToast = toast.loading(`Memproses ${ids.length} video... (0/${ids.length})`);
+
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      try {
+        await api.post(`/videos/${id}/process`);
+        success++;
+      } catch (err) {
+        failed++;
+        console.error(`Gagal memproses ${id}:`, err);
+      }
+      toast.loading(`Memproses ${ids.length} video... (${i + 1}/${ids.length})`, { id: loadingToast });
+    }
+
+    if (failed === 0) {
+      toast.success(`${success} video masuk antrian render!`, { id: loadingToast });
+    } else {
+      toast.error(`${success} berhasil, ${failed} gagal`, { id: loadingToast });
+    }
+    setProcessingSelected(false);
+    fetchVideos();
   };
 
   const handleSync = async () => {
@@ -100,12 +183,102 @@ export default function VideoList() {
         </div>
       )}
 
+      {/* VIDEO DETAIL MODAL */}
+      {detailVideo && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '20px'
+        }}>
+          <div className="card glass-panel" style={{ maxWidth: '560px', width: '100%', maxHeight: '80vh', overflowY: 'auto', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>Detail Video</h3>
+              <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => setDetailVideo(null)}>✕</button>
+            </div>
+
+            {detailVideo.loading ? (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <div className="spinner" />
+                <p style={{ marginTop: '0.75rem', color: 'var(--text-muted)' }}>Memuat detail...</p>
+              </div>
+            ) : detailVideo.data ? (
+              <>
+                {/* Info utama */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                  {[
+                    ['ID', detailVideo.data.id],
+                    ['Status', detailVideo.data.status?.toUpperCase()],
+                    ['Resolusi', detailVideo.data.resolution],
+                    ['Silence Cut', `Level ${detailVideo.data.silence_cut_level}`],
+                    ['Font Caption', detailVideo.data.caption_font],
+                    ['Dibuat', new Date(detailVideo.data.created_at).toLocaleString('id-ID')],
+                  ].map(([label, value]) => (
+                    <div key={label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px 12px' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{value ?? '-'}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Job Logs */}
+                {detailVideo.data.jobs && detailVideo.data.jobs.length > 0 && (
+                  <>
+                    <h4 style={{ marginBottom: '12px', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Riwayat Proses</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {detailVideo.data.jobs.map((job, i) => (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          padding: '8px 12px', borderRadius: '8px',
+                          background: 'rgba(255,255,255,0.04)',
+                          borderLeft: `3px solid ${
+                            job.status === 'success' ? 'var(--success)' :
+                            job.status === 'running' ? 'var(--warning)' : 'var(--danger)'
+                          }`
+                        }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem', minWidth: '80px' }}>{job.step}</span>
+                          <span className={`badge badge-${
+                            job.status === 'success' ? 'success' : job.status === 'running' ? 'warning' : 'danger'
+                          }`} style={{ fontSize: '0.7rem' }}>{job.status}</span>
+                          {job.message && (
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', flex: 1, textAlign: 'right' }}>{job.message.slice(0, 60)}</span>
+                          )}
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            {new Date(job.created_at).toLocaleTimeString('id-ID')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Data tidak tersedia</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title">Daftar Video</h1>
           <p className="page-subtitle" style={{ marginBottom: 0 }}>Kelola dan pantau semua video dalam antrian Anda.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleProcessSelected}
+              disabled={processingSelected}
+              className="btn btn-primary"
+              style={{
+                background: 'var(--accent-gradient)',
+                boxShadow: '0 4px 16px rgba(139, 92, 246, 0.35)',
+                fontWeight: 600,
+              }}
+            >
+              <Zap size={18} /> Render {selectedIds.size} Video
+            </button>
+          )}
           <button onClick={handleSync} className="btn btn-primary">
             <FolderSync size={18} /> Sync Folder
           </button>
@@ -129,6 +302,15 @@ export default function VideoList() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                <th style={{ padding: '16px 8px', fontWeight: 500, width: '44px', textAlign: 'center' }}>
+                  <span
+                    onClick={toggleSelectAll}
+                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', userSelect: 'none' }}
+                    title={isAllSelected ? 'Batal pilih semua' : 'Pilih semua'}
+                  >
+                    {isAllSelected ? <CheckSquare size={18} color="var(--accent-primary)" /> : <Square size={18} />}
+                  </span>
+                </th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>ID Video</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>Tanggal</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>Status</th>
@@ -137,16 +319,40 @@ export default function VideoList() {
             </thead>
             <tbody>
               {videos.length === 0 ? (
-                <tr><td colSpan="4" style={{textAlign: 'center', padding: '20px'}}>Belum ada video terdaftar.</td></tr>
+                <tr><td colSpan="5" style={{textAlign: 'center', padding: '20px'}}>Belum ada video terdaftar.</td></tr>
               ) : videos.map((vid, idx) => {
                 const status = (vid.status || '').toUpperCase();
                 let badgeType = 'warning';
                 if (status === 'COMPLETED') badgeType = 'success';
                 if (status === 'FAILED') badgeType = 'danger';
+                if (status === 'CANCELLED') badgeType = 'warning';
                 if (status === 'PENDING') badgeType = 'secondary';
-                
+
+                const isProcessable = status === 'PENDING' || status === 'FAILED';
+                const isSelected = selectedIds.has(vid.id);
+
                 return (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                  <tr key={idx} style={{
+                    borderBottom: '1px solid var(--border-light)',
+                    backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.08)' : 'transparent',
+                    transition: 'background-color 0.2s',
+                  }}>
+                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
+                      {isProcessable ? (
+                        <span
+                          onClick={() => toggleSelect(vid.id)}
+                          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', userSelect: 'none' }}
+                          title={isSelected ? 'Batal pilih' : 'Pilih'}
+                        >
+                          {isSelected
+                            ? <CheckSquare size={18} color="var(--accent-primary)" />
+                            : <Square size={18} />
+                          }
+                        </span>
+                      ) : (
+                        <Square size={18} style={{ opacity: 0.25, cursor: 'not-allowed' }} />
+                      )}
+                    </td>
                     <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>{vid.id}</td>
                     <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{new Date(vid.created_at).toLocaleDateString()}</td>
                     <td style={{ padding: '16px 12px' }}>
@@ -154,6 +360,16 @@ export default function VideoList() {
                     </td>
                     <td style={{ padding: '16px 12px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        {status === 'PROCESSING' && (
+                          <button
+                            onClick={() => handleCancel(vid.id)}
+                            className="btn btn-secondary"
+                            style={{ padding: '6px 10px', background: 'var(--warning)', color: '#000', border: 'none' }}
+                            title="Batalkan proses"
+                          >
+                            <StopCircle size={16} />
+                          </button>
+                        )}
                         {status === 'FAILED' && (
                           <button onClick={() => handleProcess(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Retry">
                             <RotateCcw size={16} />
@@ -164,7 +380,7 @@ export default function VideoList() {
                             <Play size={16} />
                           </button>
                         )}
-                        <button className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Detail">
+                        <button onClick={() => openDetail(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Detail">
                           <MoreHorizontal size={16} />
                         </button>
                         <button onClick={() => setVideoToDelete(vid.id)} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus">

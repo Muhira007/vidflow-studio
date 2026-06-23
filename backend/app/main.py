@@ -50,12 +50,13 @@ def read_root():
     return {"message": "Welcome to Auto Video Editor API"}
 
 # Include routers
-from app.routers import videos, settings, dashboard, fs, output
+from app.routers import videos, settings, dashboard, fs, output, groups
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(videos.router, prefix="/api/videos", tags=["Videos"])
 app.include_router(output.router, prefix="/api/outputs", tags=["Outputs"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
 app.include_router(fs.router, prefix="/api/fs", tags=["FileSystem"])
+app.include_router(groups.router, prefix="/api/groups", tags=["Groups"])
 
 # Wrap the app to guarantee CORS headers on error responses (e.g. 500)
 app = CORSOnErrorMiddleware(app)
