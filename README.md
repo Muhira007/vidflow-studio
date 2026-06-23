@@ -162,4 +162,8 @@ DEEPSEEK_API_KEY="sk-..."        # AI Caption + Cover Title
 
 ## 📜 Lisensi
 
+MIT License
+
+Dibuat oleh **Dede Muhira (kang demuh)** dengan ❤️
+
 Aplikasi ini ditujukan untuk mempermudah produksi video massal dan otomatisasi kreator konten.
