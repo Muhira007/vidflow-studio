@@ -35,14 +35,27 @@ Dokumen ini melacak status pengembangan aplikasi **Auto Video Editor** berdasark
 - [x] **Dokumentasi Lengkap:** `README.md` diperbarui dengan tutorial terbaru (native services, start-all.sh, .bat launchers).
 
 ### AI & Pipeline Enhancement (Juni 2026)
-- [x] **VAD/AI Speech Detection (Level 3):** Integrasi **Silero VAD** (PyTorch) untuk deteksi suara manusia vs noise. Suara kipas/bayi/kendaraan otomatis dibuang. Konfigurasi speech threshold dari dashboard.
-- [x] **AI Social Media Caption:** Integrasi **DeepSeek V4 Flash** untuk mengubah transkrip mentah menjadi caption siap sosmed (dengan emoji, hashtag, dan 16 gaya bahasa). Generate on-demand dari halaman Hasil Render.
-- [x] **AI Cover Title Generation:** Judul cover digenerate otomatis oleh DeepSeek dari transkrip. Auto line-wrap agar teks muat di gambar. 16 gaya bahasa + max kata configurable.
-- [x] **Halaman Hasil Render:** Halaman baru `/outputs` — preview cover, tombol copy caption AI, download file, toggle upload sosmed, delete. Filter + pagination 20 data/halaman + video player pop-up.
-- [x] **Render Multi-Codec:** Support H.264, H.265/HEVC, WebM. Konfigurasi codec dari dashboard (sebelumnya hardcode H.264).
-- [x] **16 Gaya Bahasa:** Daftar gaya bahasa lengkap untuk caption AI & judul cover (Gen-Z, Hard Selling FOMO, Storytelling, Edukasi, Savage, ASMR, dll).
-- [x] **Global Settings API Keys:** Halaman unified untuk OpenAI + DeepSeek API keys.
-- [x] **DeepSeek Reasoning Fix:** Debug mode thinking/ reasoning DeepSeek V4 Flash yang menyebabkan output kosong — dinonaktifkan via `extra_body` parameter.
+- [x] **VAD/AI Speech Detection (Level 3):** Integrasi **Silero VAD** (PyTorch) untuk deteksi suara manusia vs noise.
+- [x] **AI Social Media Caption:** DeepSeek V4 Flash — caption siap sosmed dengan emoji, hashtag, 16 gaya bahasa.
+- [x] **AI Cover Title Generation:** Judul cover oleh DeepSeek dari transkrip. Auto line-wrap.
+- [x] **Halaman Hasil Render:** Preview, copy caption AI, download, toggle upload, delete. Pagination + video player.
+- [x] **Render Multi-Codec:** H.264, H.265/HEVC, WebM.
+- [x] **16 Gaya Bahasa:** Gen-Z, Hard Selling, Storytelling, Edukasi, Savage, ASMR, dll.
+- [x] **Global Settings API Keys:** OpenAI + DeepSeek unified.
+
+### UI/UX & Pipeline Enhancement (Juni 2026 — Sesi 2)
+- [x] **Sequential Processing:** Celery `--concurrency=1` + `prefetch_multiplier=1` — video diproses satu per satu agar tidak overload laptop.
+- [x] **Product Group (Kelola Produk):** Model `ProductGroup` — folder source dipetakan ke nama produk. AI caption & cover pakai konteks produk sebagai fokus utama (bukan sekadar transkrip).
+- [x] **Multi-File Upload:** Drag & drop banyak file sekaligus di File Explorer + progress toast per file.
+- [x] **Styled Delete Modal:** Konfirmasi hapus di File Explorer pakai glass-panel overlay (tidak lagi `confirm()` browser).
+- [x] **Global Text Overflow Fix:** CSS `word-break` di semua elemen — teks panjang tidak out dari box.
+- [x] **Batch Render:** Checkbox select-all + tombol "Render N Video" di Daftar Video.
+- [x] **3 New Cover Templates:** `tpl_new_1` (Kuning-Putih), `tpl_new_2` (Hijau-Putih), `tpl_new_3` (Merah-Putih) — dual-color, 25 karakter/baris, posisi 35% dari bawah. Template lama (`grad_1–5`) dihapus.
+- [x] **Auto-Font Fix:** Font cover sekarang adaptif ke resolusi + panjang teks — tidak lagi out-of-frame.
+- [x] **Cover Config Update:** Slider maksimum kata judul 3–12 (default 7).
+- [x] **Cancel Processing:** Tombol Stop (⏹) untuk batalkan pipeline yang sedang berjalan — status `CANCELLED`.
+- [x] **Video Detail Modal:** Tombol `...` sekarang menampilkan detail video + riwayat job log per step.
+- [x] **Bug Fixes:** Delete endpoint (path converter), sync 500 error, DB column migration (`celery_task_id`, enum `CANCELLED`), output file matching, empty folder cleanup.
 
 ---
 

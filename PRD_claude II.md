@@ -93,9 +93,11 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 - **Silence Cut** Level 1 (trim awal/akhir), Level 2 (hapus silence amplitude), **Level 3 (VAD/AI)** — deteksi suara manusia vs noise pakai AI
 - **Auto Caption** (speech-to-text Whisper + burn-in, style diatur dari dashboard)
 - **AI Social Caption** — transkrip diolah ulang oleh DeepSeek V4 Flash menjadi caption siap upload sosmed (dengan hashtag, emoji, dan 16 pilihan gaya bahasa)
-- **Auto Cover** — 4 template + **AI-generated judul cover** dari DeepSeek (auto line-wrap)
-- Render otomatis ke .mp4 (HD/FHD/4K, codec H.264/H.265/WebM)
-- Admin dashboard: konfigurasi, monitoring job, halaman hasil render, log/riwayat
+- **Auto Cover** — 3 template dual-color + **AI-generated judul cover** dari DeepSeek (auto line-wrap, konteks produk)
+- **Product Group** — mapping folder → nama produk, AI pakai konteks produk (bukan cuma transkrip)
+- Render otomatis ke .mp4 (HD/FHD/4K, codec H.264/H.265/WebM), **sequential processing**
+- Admin dashboard: konfigurasi, monitoring job, halaman hasil render, **kelola produk**, log/riwayat
+- **Cancel processing**, **batch render**, **video detail modal**
 
 ### Out-of-Scope (Fase Berikutnya — belum dirancang detail)
 - Fitur tambahan yang belum ditentukan
@@ -228,6 +230,7 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 
 - Caption AI mencakup: teks engaging + emoji + hashtag.
 - Tersedia **16 gaya bahasa** (Gen-Z, Hard Selling, Storytelling, Edukasi, Savage, dll).
+- **Konteks produk:** AI menggunakan nama produk dari ProductGroup sebagai fokus utama caption (bukan cuma transkrip).
 - Caption bisa digenerate **on-demand** dari halaman Hasil Render tanpa proses ulang video.
 - Parameter (max kata, jumlah hashtag, gaya) dikonfigurasi di halaman **Auto Caption**.
 
@@ -243,8 +246,9 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 
 **Deskripsi:** Judul cover video digenerate otomatis oleh **DeepSeek V4 Flash** dari transkrip, menggantikan input manual.
 
-- Judul pendek (default 5 kata) agar muat di cover.
-- **Auto line-wrap** — teks otomatis turun ke baris baru jika melebihi lebar gambar.
+- Judul pendek (default 7 kata, maks 12) agar muat di cover.
+- **Auto line-wrap + auto-font** — teks turun ke baris baru + font mengecil jika melebihi lebar gambar.
+- **Konteks produk:** AI menggunakan nama produk dari ProductGroup, transkrip hanya sebagai pelengkap.
 - 16 gaya bahasa (sama dengan caption AI).
 
 **Parameter:**
@@ -252,7 +256,7 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 | Parameter | Default | Keterangan |
 |---|---|---|
 | Gaya Bahasa Judul | Santai & Gaul (Gen-Z) | 16 pilihan |
-| Maksimum Kata Judul | 5 | 2-10 kata |
+| Maksimum Kata Judul | 7 | 3-12 kata |
 
 ---
 
@@ -344,7 +348,8 @@ erDiagram
     
     VIDEOS {
         string id PK "Nama unik folder video"
-        string status "PENDING, PROCESSING, COMPLETED, FAILED, INVALID, UPLOADED"
+        string status "PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED, INVALID, UPLOADED"
+        string celery_task_id "ID task Celery untuk cancel"
         int silence_cut_level
         float silence_threshold
         string caption_font
@@ -358,6 +363,14 @@ erDiagram
         datetime updated_at
     }
     
+    PRODUCT_GROUPS {
+        string id PK "Nama folder di source/"
+        string product_name "Nama produk untuk AI"
+        string product_description "Deskripsi opsional"
+        datetime created_at
+        datetime updated_at
+    }
+
     JOB_LOGS {
         int id PK
         string video_id FK "Referensi ke VIDEOS.id"
@@ -378,6 +391,10 @@ erDiagram
 | GET | `/api/videos/{id}` | Detail video tertentu termasuk riwayat job |
 | POST | `/api/videos/sync` | Trigger scan folder secara manual |
 | POST | `/api/videos/{id}/process` | Trigger pipeline job untuk video tertentu |
+| POST | `/api/videos/{id}/cancel` | Batalkan pipeline yang sedang berjalan |
+| GET | `/api/groups` | List semua grup produk |
+| PUT | `/api/groups/{id}` | Update nama & deskripsi produk |
+| POST | `/api/groups/sync` | Sinkronisasi folder source ke grup produk |
 | GET | `/api/jobs/{job_id}` | Cek status job tertentu |
 | POST | `/api/jobs/{job_id}/retry` | Retry job yang gagal |
 | GET | `/api/settings` | Ambil seluruh setting global |
@@ -407,8 +424,16 @@ erDiagram
 - Dukungan interaksi *mobile/smartphone* (opsi checkbox & tombol tiga titik untuk touch interface).
 - Fungsi CRUD (Create, Rename, Delete, Upload file) langsung dari UI tanpa harus membuka folder laptop.
 
+**Kelola Produk**
+- Card grid: mapping folder ID → nama produk & deskripsi
+- Input inline + tombol Simpan, Sync Folder dari source/
+- AI caption & cover akan menggunakan konteks produk ini
+
 **Daftar Video**
-- Tabel: ID (nama folder), status tiap step (ikon), durasi asli vs setelah cut, tombol aksi (Proses / Retry / Detail)
+- Tabel: checkbox multi-select, ID, tanggal, status, tombol aksi (Proses / Stop / Detail / Hapus)
+- Select All + Batch Render: tombol "Render N Video" untuk memproses banyak video
+- Video Detail Modal (`...`): info lengkap + riwayat job log per step
+- Cancel Processing: tombol Stop untuk batalkan pipeline yang sedang berjalan
 - Filter: status, tanggal masuk
 
 **Hasil Render**
@@ -429,9 +454,10 @@ erDiagram
 - **Section AI Caption Sosmed:** max kata, jumlah hashtag, 16 gaya bahasa
 
 **Konfigurasi Cover**
-- Pilihan template (4 template dengan preview)
-- Posisi judul, opacity background
-- **AI Generate Judul:** 16 gaya bahasa + max kata (DeepSeek)
+- Pilihan template (3 template dual-color + Blank Cover dengan preview)
+- Template: Kuning-Putih, Hijau-Putih, Merah-Putih — 25 karakter/baris, dual-color
+- Slider max kata judul 3-12 (default 7)
+- **AI Generate Judul:** 16 gaya bahasa + konteks produk (DeepSeek)
 
 **Konfigurasi Render**
 - Dropdown resolusi: HD / FHD / 4K

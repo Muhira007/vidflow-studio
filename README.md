@@ -5,9 +5,12 @@ Auto Video Editor adalah aplikasi *full-stack* pintar untuk mengotomatisasi alur
 - 🤖 **VAD/AI Speech Detection** — deteksi suara manusia vs noise (Silero VAD)
 - ✂️ **Silence Cut 3 Level** — amplitude-based + AI-based cutting
 - 📝 **Auto Caption** — transkripsi Whisper + burn-in subtitle
-- ✨ **AI Social Caption** — caption siap sosmed via DeepSeek (16 gaya bahasa)
-- 🖼️ **Auto Cover** — 4 template + AI-generated judul (DeepSeek)
+- ✨ **AI Social Caption** — caption siap sosmed via DeepSeek (16 gaya bahasa, konteks produk)
+- 🖼️ **Auto Cover** — 3 template dual-color + AI-generated judul (konteks produk)
 - 🎥 **Multi-Codec Render** — H.264 / H.265 / WebM, HD/FHD/4K
+- 🏷️ **Product Group** — mapping folder → nama produk untuk konteks AI
+- ⏹️ **Cancel Processing** — batalkan pipeline yang sedang berjalan
+- ✅ **Batch Render** — select all + proses banyak video sekaligus
 
 ## 🏗 Arsitektur Sistem
 
