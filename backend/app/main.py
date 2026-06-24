@@ -127,7 +127,7 @@ from app.models import Video  # noqa: E402
 
 @app.get("/api/outputs/{video_id:path}/download")
 def public_download(video_id: str):
-    """Download rendered video — PUBLIC. Cari file langsung tanpa DB query."""
+    """Download rendered video — PUBLIC. Gunakan X-Accel-Redirect agar Nginx serve file langsung."""
     # Parse folder & filename dari URL: "FOLDER/FILENAME"
     parts = video_id.rsplit("/", 1)
     folder = parts[0] if len(parts) > 1 else video_id
@@ -135,13 +135,18 @@ def public_download(video_id: str):
 
     output_folder = os.path.join(OUTPUT_DIR, folder)
     if os.path.isdir(output_folder):
-        # Cari file output dengan prefix nama (tanpa cek DB)
+        # Cari file output dengan prefix nama
         for f in sorted(os.listdir(output_folder), reverse=True):
             if f.startswith(name_prefix) and f.lower().endswith((".mp4", ".webm", ".mkv")):
-                file_path = os.path.join(output_folder, f)
+                # X-Accel-Redirect: Nginx serve file langsung dari disk (kecepatan penuh)
+                accel_path = f"/_download/{folder}/{f}"
                 return FileResponse(
-                    file_path, media_type="video/mp4", filename=f,
-                    headers={"Accept-Ranges": "bytes", "X-Accel-Buffering": "no"},
+                    "",
+                    media_type="application/octet-stream",
+                    headers={
+                        "X-Accel-Redirect": accel_path,
+                        "Content-Disposition": f'attachment; filename="{f}"',
+                    },
                 )
 
     raise HTTPException(status_code=404, detail="Output file not found")

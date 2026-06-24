@@ -101,6 +101,7 @@ services:
       - backend
     volumes:
       - ./ssl:/etc/nginx/ssl:ro
+      - output_data:/home/app/output:ro
 
 volumes:
   postgres_data:
