@@ -110,75 +110,26 @@ export default function OutputList() {
     }
   };
 
-  const handleDownload = async (videoId) => {
+  const handleDownload = (videoId) => {
     const fileName = videoId.split('/').pop() + '.mp4';
+    const token = localStorage.getItem('vidflow_token');
+    const url = `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
+
+    // Tampilkan modal
     setDownloadState({
       show: true, fileName, progress: 0, loaded: 0, total: 0,
       speed: 0, status: 'connecting', error: '',
     });
 
-    try {
-      const token = localStorage.getItem('vidflow_token');
-      const url = `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
+    // Buka download di tab baru — server kirim Content-Disposition: attachment
+    // Browser akan auto-tutup tab & mulai download native
+    const w = window.open(url, '_blank');
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const contentLength = response.headers.get('Content-Length');
-      const total = contentLength ? parseInt(contentLength, 10) : 0;
-      const reader = response.body.getReader();
-      const chunks = [];
-      let loaded = 0;
-      const startTime = Date.now();
-
-      setDownloadState(prev => ({ ...prev, total, status: 'downloading' }));
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        chunks.push(value);
-        loaded += value.length;
-        const elapsed = (Date.now() - startTime) / 1000;
-        const speed = elapsed > 0 ? loaded / elapsed : 0;
-
-        setDownloadState(prev => ({
-          ...prev,
-          loaded,
-          progress: total ? Math.round((loaded * 100) / total) : 0,
-          speed,
-        }));
-      }
-
-      // Selesai — gabungkan chunks
-      setDownloadState(prev => ({ ...prev, status: 'finishing' }));
-      const blob = new Blob(chunks);
-      const blobUrl = URL.createObjectURL(blob);
-
-      const disposition = response.headers.get('Content-Disposition');
-      let finalName = fileName;
-      if (disposition) {
-        const match = disposition.match(/filename="?(.+?)"?$/);
-        if (match) finalName = match[1];
-      }
-
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = finalName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
-
+    // Auto-close modal setelah beberapa detik
+    setTimeout(() => {
       setDownloadState(prev => ({ ...prev, status: 'done' }));
-      setTimeout(() => setDownloadState(prev => ({ ...prev, show: false })), 1500);
-    } catch (err) {
-      console.error('Download error:', err);
-      setDownloadState(prev => ({
-        ...prev, status: 'error',
-        error: err.message || 'Gagal download',
-      }));
-    }
+      setTimeout(() => setDownloadState(prev => ({ ...prev, show: false })), 2000);
+    }, 4000);
   };
 
   const closeDownload = () => {
