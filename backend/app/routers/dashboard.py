@@ -25,7 +25,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         Video.status == 'FAILED'
     ).count()
 
-    recent_jobs = db.query(JobLog).order_by(JobLog.created_at.desc()).limit(5).all()
+    recent_jobs = db.query(JobLog).order_by(JobLog.created_at.desc()).limit(15).all()
     
     # Transform recent_jobs
     recent_jobs_data = []
