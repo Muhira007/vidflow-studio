@@ -49,11 +49,15 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         else:
             time_str = f"{int(minutes // 1440)} days ago"
 
+        # Format timestamp lengkap: "24 Jun 2026, 14:30:25"
+        formatted_time = created_at.strftime("%d %b %Y, %H:%M:%S")
+
         recent_jobs_data.append({
             "id": log.video_id,
             "step": log.step.capitalize(),
             "status": log.status.capitalize(),
             "time": time_str,
+            "datetime": formatted_time,
             "type": job_type
         })
         

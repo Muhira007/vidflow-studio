@@ -56,7 +56,7 @@ function Sidebar({ isOpen, setIsOpen }) {
         <div className="logo-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="logo-icon">V</div>
-            <div className="logo-text">AutoVideo Pro</div>
+            <div className="logo-text">Vidflow Studio</div>
           </div>
           <button className="mobile-close-btn" onClick={() => setIsOpen(false)}>
             <X size={24} />
@@ -104,11 +104,11 @@ function App() {
               <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
                 <Menu size={24} />
               </button>
-              <div className="header-title" style={{ color: 'var(--text-secondary)' }}>Welcome to AutoVideo Pipeline</div>
+              <div className="header-title" style={{ color: 'var(--text-secondary)' }}>Welcome to Vidflow Studio</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span className="badge badge-success hide-mobile">System Online</span>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>A</div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>V</div>
             </div>
           </header>
           

@@ -4,7 +4,7 @@
 
 | Field | Detail |
 |---|---|
-| Nama Produk | _(diisi nanti — kerja sementara: "Auto Video Editor")_ |
+| Nama Produk | **Vidflow Studio** — Automated affiliate video editing with streamlined workflow automation |
 | Versi Dokumen | 1.0 |
 | Tanggal | 20 Juni 2026 |
 | Status | Draft — siap dipakai sebagai acuan development |

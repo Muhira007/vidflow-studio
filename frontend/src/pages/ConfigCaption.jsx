@@ -12,6 +12,7 @@ export default function ConfigCaption() {
   const [outlineSize, setOutlineSize] = useState(2);
   const [outlineColor, setOutlineColor] = useState('#000000');
   const [position, setPosition] = useState(15); // Percentage 0 to 100
+  const [capitalize, setCapitalize] = useState(false); // UPPERCASE all caption words
   const [socialMaxWords, setSocialMaxWords] = useState(40);
   const [socialHashtags, setSocialHashtags] = useState(5);
   const [socialTone, setSocialTone] = useState('Santai & Gaul (Gen-Z)');
@@ -38,6 +39,7 @@ export default function ConfigCaption() {
       if (res.data.caption_outline_size !== undefined) setOutlineSize(res.data.caption_outline_size);
       if (res.data.caption_outline) setOutlineColor(res.data.caption_outline);
       if (res.data.caption_position) setPosition(res.data.caption_position);
+      if (res.data.caption_capitalize !== undefined) setCapitalize(res.data.caption_capitalize);
       if (res.data.caption_social_max_words) setSocialMaxWords(res.data.caption_social_max_words);
       if (res.data.caption_social_hashtags) setSocialHashtags(res.data.caption_social_hashtags);
       if (res.data.caption_social_tone) setSocialTone(res.data.caption_social_tone);
@@ -59,6 +61,7 @@ export default function ConfigCaption() {
         caption_outline_size: outlineSize,
         caption_outline: outlineColor,
         caption_position: position,
+        caption_capitalize: capitalize,
         caption_social_max_words: parseInt(socialMaxWords) || 40,
         caption_social_hashtags: parseInt(socialHashtags) || 5,
         caption_social_tone: socialTone
@@ -174,6 +177,17 @@ export default function ConfigCaption() {
             </div>
           </>
         )}
+
+        <div className="form-group">
+          <label className="form-label">Kapital (UPPERCASE)</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', height: '40px' }}>
+            <label className="switch">
+              <input type="checkbox" checked={capitalize} onChange={e => setCapitalize(e.target.checked)} />
+              <span className="slider"></span>
+            </label>
+            <span>{capitalize ? 'AKTIF — Semua huruf besar' : 'Nonaktif — Sesuai transkrip'}</span>
+          </div>
+        </div>
 
         <div className="form-group" style={{ gridColumn: outlineEnabled ? 'span 2' : 'auto' }}>
           <label className="form-label">Posisi Vertikal Caption</label>

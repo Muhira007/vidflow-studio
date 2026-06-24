@@ -61,6 +61,7 @@ def list_outputs(db: Session = Depends(get_db)):
             "video_file": video_file,
             "cover_file": cover_file,
             "created_at": v.created_at.isoformat() if v.created_at else None,
+            "completed_at": v.completed_at.isoformat() if v.completed_at else None,
         })
 
     return results
@@ -106,14 +107,15 @@ def get_caption(video_id: str, format: str = "plain", db: Session = Depends(get_
 
 @router.get("/{video_id:path}/social-caption")
 def get_social_caption(video_id: str, db: Session = Depends(get_db)):
-    """Return the AI-generated social-media caption. Generates on-demand if missing."""
+    """Return the AI-generated social-media caption. Generates on-demand from product context if missing."""
     video = db.query(Video).filter(Video.id == video_id).first()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    # Jika caption_social belum ada, generate on-demand via DeepSeek
-    if not video.caption_social and video.caption_text:
+    # Jika caption_social belum ada, generate on-demand via DeepSeek dari produk
+    if not video.caption_social:
         from app.services.caption_rewriter import generate_social_caption
+        from app.models import ProductGroup
         import json
 
         settings_file = "/home/kangdemuh/aplikasi/video-editor/claude2/backend/app/global_settings.json"
@@ -122,24 +124,37 @@ def get_social_caption(video_id: str, db: Session = Depends(get_db)):
             with open(settings_file, "r") as f:
                 gs_cap = json.load(f)
 
-        try:
-            social = generate_social_caption(
-                video.caption_text,
-                max_words=gs_cap.get("caption_social_max_words", 40),
-                hashtag_count=gs_cap.get("caption_social_hashtags", 5),
-                tone=gs_cap.get("caption_social_tone", "casual"),
-            )
-            if social:
-                video.caption_social = social
-                db.commit()
-        except Exception as e:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Gagal generate caption AI: {str(e)}. Pastikan DEEPSEEK_API_KEY sudah diisi di Global Settings."
-            )
+        # Lookup product context dari source_folder
+        product_context = None
+        if video.source_folder:
+            pg = db.query(ProductGroup).filter(ProductGroup.id == video.source_folder).first()
+            if pg and pg.product_name:
+                product_context = {
+                    "product_name": pg.product_name,
+                    "product_description": pg.product_description,
+                }
+
+        # Hanya generate kalau ada product_context ATAU caption_text
+        if product_context or video.caption_text:
+            try:
+                social = generate_social_caption(
+                    srt_content=video.caption_text or "",
+                    max_words=gs_cap.get("caption_social_max_words", 40),
+                    hashtag_count=gs_cap.get("caption_social_hashtags", 5),
+                    tone=gs_cap.get("caption_social_tone", "casual"),
+                    product_context=product_context,
+                )
+                if social:
+                    video.caption_social = social
+                    db.commit()
+            except Exception as e:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Gagal generate caption AI: {str(e)}. Pastikan DEEPSEEK_API_KEY sudah diisi di Global Settings."
+                )
 
     if not video.caption_social:
-        raise HTTPException(status_code=404, detail="No caption available. Process video first to get transcript.")
+        raise HTTPException(status_code=404, detail="No caption available. Isi nama produk di Product Group terlebih dahulu.")
 
     return {
         "video_id": video_id,

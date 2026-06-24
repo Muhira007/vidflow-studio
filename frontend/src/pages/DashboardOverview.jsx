@@ -96,7 +96,10 @@ export default function DashboardOverview() {
                   <td style={{ padding: '16px 12px' }}>
                     <span className={`badge badge-${job.type}`}>{job.status}</span>
                   </td>
-                  <td style={{ padding: '16px 12px', color: 'var(--text-muted)' }}>{job.time}</td>
+                  <td style={{ padding: '16px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{job.datetime || job.time}</div>
+                    {job.datetime && <div style={{ fontSize: '0.7rem', marginTop: '2px' }}>{job.time}</div>}
+                  </td>
                   <td style={{ padding: '16px 12px' }}>
                     <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.8rem' }}>Detail</button>
                   </td>

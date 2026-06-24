@@ -24,6 +24,7 @@ class VideoResponse(BaseModel):
     final_duration: Optional[float]
     created_at: datetime
     updated_at: Optional[datetime]
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

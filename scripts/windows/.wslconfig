@@ -1,0 +1,5 @@
+[wsl2]
+# Jangan auto-shutdown VM WSL saat tidak ada koneksi terminal aktif.
+# Ini penting agar service (PostgreSQL, Redis, Backend, Celery, Frontend)
+# tetap berjalan meskipun semua jendela WSL sudah ditutup.
+vmIdleTimeout=-1

@@ -42,6 +42,65 @@ def get_video_duration(input_path: str) -> float:
     video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
     return float(video_info['duration'])
 
+
+def get_video_info(input_path: str) -> dict:
+    """Ambil informasi video: width, height, pixel format, bit depth.
+
+    Returns dict dengan keys: width, height, pix_fmt, is_10bit, need_downscale
+    """
+    probe = ffmpeg.probe(input_path)
+    video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+    w = int(video_info.get('width', 1920))
+    h = int(video_info.get('height', 1080))
+    pix_fmt = video_info.get('pix_fmt', 'yuv420p')
+    is_10bit = '10' in pix_fmt or 'p010' in pix_fmt or 'p016' in pix_fmt
+    need_downscale = w > 1920 or h > 1080
+    return {
+        'width': w, 'height': h,
+        'pix_fmt': pix_fmt,
+        'is_10bit': is_10bit,
+        'need_downscale': need_downscale,
+    }
+
+
+def downscale_to_1080p(input_path: str, output_path: str, is_10bit: bool = False) -> str:
+    """Downscale video ke 1080p dengan kualitas tinggi (hampir lossless).
+
+    - 10-bit source → H.265 10-bit, CRF 10
+    - 8-bit source  → H.264 8-bit, CRF 8
+
+    Audio di-stream-copy (tidak di-reencode).
+    """
+    if is_10bit:
+        # H.265 10-bit — pertahankan kualitas warna tinggi
+        (
+            ffmpeg
+            .input(input_path)
+            .output(
+                output_path,
+                vf='scale=1920:1080:force_original_aspect_ratio=decrease',
+                vcodec='libx265', crf=10, preset='medium',
+                pix_fmt='yuv420p10le',
+                acodec='copy',
+            )
+            .run(overwrite_output=True)
+        )
+    else:
+        # H.264 8-bit — CRF sangat rendah untuk kualitas transparan
+        (
+            ffmpeg
+            .input(input_path)
+            .output(
+                output_path,
+                vf='scale=1920:1080:force_original_aspect_ratio=decrease',
+                vcodec='libx264', crf=8, preset='medium',
+                pix_fmt='yuv420p',
+                acodec='copy',
+            )
+            .run(overwrite_output=True)
+        )
+    return output_path
+
 def process_silence_cut(input_path: str, output_path: str, level: int = 1, threshold: float = -30.0, min_duration: float = 0.3, padding_ms: int = 150):
     """
     Melakukan silence cut pada video.
@@ -135,9 +194,7 @@ def render_final_video(input_video: str, output_video: str, resolution: str = "1
     is_vertical = height >= width
 
     # Tentukan skala maksimum berdasarkan parameter resolution
-    if resolution.upper() == "4K":
-        target_max = 3840 if not is_vertical else 2160
-    elif resolution.upper() == "720P":
+    if resolution.upper() == "720P":
         target_max = 1280 if not is_vertical else 720
     else: # default 1080p
         target_max = 1920 if not is_vertical else 1080

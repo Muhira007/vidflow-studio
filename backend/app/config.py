@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # App Settings
-    app_name: str = "Auto Video Editor"
+    app_name: str = "Vidflow Studio"
     
     # Database Settings
     database_url: str = "postgresql://postgres:postgres@localhost:5432/auto_video_editor"

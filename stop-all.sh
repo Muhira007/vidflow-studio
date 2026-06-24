@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-# Auto Video Editor — Stop All Services
+# Vidflow Studio — Stop All Services
 # ============================================
 set -e
 
@@ -12,9 +12,20 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Helper: bunuh semua proses di port tertentu
+force_kill_port() {
+    local port="$1"
+    local pids
+    pids=$(fuser "$port/tcp" 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+        fuser -k "$port/tcp" 2>/dev/null || true
+        sleep 0.5
+    fi
+}
+
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║  Auto Video Editor — Stop All Services  ║${NC}"
+echo -e "${CYAN}║    Vidflow Studio — Stop All Services    ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -31,6 +42,9 @@ else
     echo -e "${YELLOW}tidak berjalan${NC}"
 fi
 rm -f "$LOGS_DIR/frontend.pid"
+# Bersihkan port frontend (5173 + fallback 5174) dari zombie
+force_kill_port 5173
+force_kill_port 5174
 
 # ---- Celery ----
 echo -n "  ⏳ Stopping Celery Worker... "
@@ -57,6 +71,8 @@ else
     echo -e "${YELLOW}tidak berjalan${NC}"
 fi
 rm -f "$LOGS_DIR/backend.pid"
+# Bersihkan port backend dari zombie
+force_kill_port 8000
 
 # ---- Redis (opsional, tidak semua orang mau stop Redis) ----
 echo -n "  ⏳ Stopping Redis... "

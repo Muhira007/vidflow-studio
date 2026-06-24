@@ -47,17 +47,16 @@ export default function ConfigRender() {
       <div className="card glass-panel grid-cols-2">
         <div className="form-group">
           <label className="form-label">Resolusi Output</label>
-          <select 
-            className="form-control" 
+          <select
+            className="form-control"
             value={resolution}
             onChange={(e) => setResolution(e.target.value)}
           >
             <option value="720p">HD (720p)</option>
             <option value="1080p">FHD (1080p)</option>
-            <option value="4K">4K (2160p)</option>
           </select>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-            4K membutuhkan waktu proses lebih lama
+            1080p direkomendasikan untuk keseimbangan kualitas & kecepatan
           </div>
         </div>
 

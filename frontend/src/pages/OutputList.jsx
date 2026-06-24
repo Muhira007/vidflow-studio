@@ -221,6 +221,7 @@ export default function OutputList() {
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '16px 12px', fontWeight: 500, width: '80px' }}>Preview</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>ID Video</th>
+                <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center', whiteSpace: 'nowrap' }}>Selesai</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Caption</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Unduh</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Upload Sosmed</th>
@@ -229,7 +230,7 @@ export default function OutputList() {
             </thead>
             <tbody>
               {paginatedOutputs.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   <Film size={48} style={{ opacity: 0.3, margin: '0 auto 16px', display: 'block' }} />
                   {outputs.length === 0 ? (
                     <>
@@ -296,6 +297,22 @@ export default function OutputList() {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
                       {out.resolution} · {out.video_file ? formatSize(out.video_file.size_bytes) : '-'}
                     </div>
+                  </td>
+
+                  {/* Selesai — tanggal & jam render */}
+                  <td style={{ padding: '16px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {out.completed_at ? (
+                      <div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          {new Date(out.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {new Date(out.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>-</span>
+                    )}
                   </td>
 
                   {/* Caption - AI Social */}

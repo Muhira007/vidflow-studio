@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-# Auto Video Editor — Start All Services
+# Vidflow Studio — Start All Services
 # Satu perintah untuk menjalankan semuanya
 # ============================================
 set -e
@@ -44,7 +44,7 @@ mkdir -p "$LOGS_DIR"
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║  Auto Video Editor — Start All Services ║${NC}"
+echo -e "${CYAN}║    Vidflow Studio — Start All Services    ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
 echo ""
 

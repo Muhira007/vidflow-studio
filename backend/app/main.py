@@ -31,8 +31,8 @@ class CORSOnErrorMiddleware:
 
 
 app = FastAPI(
-    title="Auto Video Editor API",
-    description="Backend API for Daily Video Editing Automation",
+    title="Vidflow Studio API",
+    description="Automated affiliate video editing with streamlined workflow automation",
     version="1.0.0"
 )
 
@@ -47,7 +47,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to Auto Video Editor API"}
+    return {"message": "Welcome to Vidflow Studio API"}
 
 # Include routers
 from app.routers import videos, settings, dashboard, fs, output, groups

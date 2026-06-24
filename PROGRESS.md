@@ -1,6 +1,6 @@
-# 📈 Progress Proyek: Auto Video Editor
+# 📈 Progress Proyek: Vidflow Studio
 
-Dokumen ini melacak status pengembangan aplikasi **Auto Video Editor** berdasarkan PRD (*Product Requirements Document*).
+Dokumen ini melacak status pengembangan aplikasi **Vidflow Studio** berdasarkan PRD (*Product Requirements Document*).
 
 ## 📊 Status Keseluruhan
 - **Fase Saat Ini:** Fase 5 (Testing & Enhancement) - **Selesai (MVP+ Lokal Siap Produksi)**

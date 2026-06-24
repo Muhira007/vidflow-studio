@@ -39,7 +39,7 @@ def _srt_to_plain_text(srt_content: str) -> str:
 
 
 def generate_social_caption(
-    srt_content: str,
+    srt_content: str = "",
     max_words: int = 40,
     hashtag_count: int = 5,
     tone: str = "casual",
@@ -47,42 +47,48 @@ def generate_social_caption(
     product_context: dict | None = None,
 ) -> str:
     """
-    Generate caption siap upload sosmed dari transkrip SRT.
+    Generate caption siap upload sosmed dari produk (prioritas) atau transkrip SRT.
+
+    Jika product_context tersedia → caption MURNI dari info produk (tanpa transkrip).
+    Jika TIDAK ada product_context → fallback ke transkrip SRT.
+    Ini mencegah kata-kata dari transkrip Whisper bocor ke caption yang
+    seharusnya fokus menjual produk.
 
     Args:
-        srt_content: Teks SRT mentah hasil Whisper
+        srt_content: Teks SRT mentah (hanya dipakai jika TIDAK ada product_context)
         max_words: Maksimum kata dalam caption (default 40)
         hashtag_count: Jumlah hashtag yang dihasilkan (default 5)
         tone: Gaya bahasa — "casual", "formal", "dramatic", "humor"
         language: Bahasa output caption
+        product_context: Dict dengan "product_name" & "product_description"
 
     Returns:
         String caption siap pakai untuk sosmed
     """
-    plain_text = _srt_to_plain_text(srt_content)
+    has_product = product_context and product_context.get("product_name")
+    plain_text = _srt_to_plain_text(srt_content) if srt_content else ""
 
-    if not plain_text.strip():
+    if not has_product and not plain_text.strip():
         return ""
 
     client = _get_client()
 
-    # Build product context block for AI prompt
-    product_block = ""
-    if product_context and product_context.get("product_name"):
+    if has_product:
         name = product_context["product_name"]
         desc = product_context.get("product_description", "")
-        product_block = f"""
-PRODUK YANG DIJUAL: {name}
-{f"Deskripsi: {desc}" if desc else ""}
 
-"""
-        # Product-aware prompt: product is PRIMARY, transcript is supporting
-        prompt = f"""Kamu adalah copywriter yang jago bikin caption jualan.
+        # Product ONLY — jangan sertakan transkrip SRT sama sekali.
+        # Transkrip Whisper sering mengandung kata-kata yang TIDAK relevan
+        # dengan produk dan bisa mengotori caption.
+        # Caption HARUS murni dari info produk.
+        prompt = f"""Kamu adalah copywriter yang jago bikin caption jualan untuk sosmed.
 
-{product_block}
-Di bawah ini adalah transkrip suara video yang sedang mempromosikan produk di atas.
-Gunakan transkrip HANYA sebagai bahan pendukung — fokus utama caption harus MENJUAL produk.
-Jangan hanya meringkas transkrip, tapi buat caption PERSUASIF yang bikin orang mau beli.
+BERIKUT ADALAH PRODUK YANG HARUS KAMU JUAL:
+- Nama Produk: {name}
+{f"- Deskripsi: {desc}" if desc else ""}
+
+Buat caption sosmed yang PERSUASIF untuk menjual produk ini.
+Gunakan KREATIVITAS kamu sendiri berdasarkan info produk di atas.
 
 ATURAN:
 - Maksimal {max_words} kata untuk caption utama
@@ -92,9 +98,7 @@ ATURAN:
 - Gunakan emoji secukupnya (2-4 emoji)
 - Format output: caption dulu, lalu hashtag di baris terpisah
 - WAJIB menyebutkan nama produk "**{name}**" di dalam caption
-
-TRANSKRIP (bahan pendukung):
-{plain_text}
+- Buat caption yang engaging, FOMO, bikin penasaran!
 
 CAPTION:"""
     else:
@@ -131,56 +135,59 @@ CAPTION:"""
 
 
 def generate_cover_title(
-    srt_content: str,
+    srt_content: str = "",
     max_words: int = 5,
     style: str = "Santai & Gaul (Gen-Z)",
     language: str = "indonesian",
     product_context: dict | None = None,
 ) -> str:
     """
-    Generate judul pendek untuk cover video dari transkrip SRT.
+    Generate judul pendek untuk cover video dari produk (prioritas) atau transkrip.
+
+    Jika product_context tersedia → judul MURNI dari nama produk (tanpa transkrip).
+    Jika TIDAK ada product_context → fallback ke transkrip SRT.
+    Ini mencegah kata-kata dari transkrip Whisper (seperti "saku", "ini", "itu")
+    bocor ke judul cover yang seharusnya menampilkan nama produk.
 
     Args:
-        srt_content: Teks SRT mentah
+        srt_content: Teks SRT mentah (hanya dipakai jika TIDAK ada product_context)
         max_words: Maksimum kata dalam judul (default 5)
         style: Gaya bahasa (sama dengan caption social)
         language: Bahasa output
+        product_context: Dict dengan "product_name"
 
     Returns:
         String judul pendek siap dipakai di cover
     """
-    plain_text = _srt_to_plain_text(srt_content)
+    has_product = product_context and product_context.get("product_name")
+    plain_text = _srt_to_plain_text(srt_content) if srt_content else ""
 
-    if not plain_text.strip():
+    if not has_product and not plain_text.strip():
         return ""
 
     client = _get_client()
 
-    # Build product context block for AI prompt
-    product_block = ""
-    if product_context and product_context.get("product_name"):
+    if has_product:
         name = product_context["product_name"]
         desc = product_context.get("product_description", "")
-        product_block = f"""
-PRODUK YANG DIJUAL: {name}
+
+        # Product ONLY — jangan sertakan transkrip SRT sama sekali.
+        # Transkrip Whisper sering mengandung kata-kata yang TIDAK ada di nama produk
+        # (seperti "saku", "ini", "itu") yang bisa bocor ke judul cover.
+        # Cover title HARUS murni dari nama produk.
+        prompt = f"""Tugas: Buat judul cover SINGKAT ({max_words} kata) untuk produk di bawah ini.
+
+PRODUK: {name}
 {f"Deskripsi: {desc}" if desc else ""}
-
-"""
-        # Product-aware prompt: product is PRIMARY for the title
-        prompt = f"""Tugas: Buat judul cover {max_words} kata TENTANG PRODUK di bawah ini.
-JANGAN mengulang atau meringkas transkrip. FOKUS pada produknya!
-
-{product_block}
-Transkrip suara (ABAIIKAN, jangan diulang kata-katanya):
-{plain_text}
 
 ATURAN WAJIB:
 - Judul HARUS mengandung kata "{name}"
 - MAKSIMAL {max_words} kata — lebih pendek lebih baik
 - Gaya: {style}
 - Bahasa: {language}
-- JANGAN ulangi kata-kata dari transkrip!
+- Harus catchy, bikin penasaran, dan menjual!
 - JANGAN pakai hashtag, emoji, atau tanda kutip
+- Output HANYA judulnya saja
 
 JUDUL ({max_words} kata max):"""
     else:
@@ -217,8 +224,8 @@ JUDUL:"""
     title = title.strip('"\'\"').strip()
 
     # Debug: log prompt & response
-    has_product = product_context and product_context.get("product_name")
-    print(f"[COVER-TITLE] Product: {product_context.get('product_name') if has_product else 'NONE'} → Title: \"{title}\"")
+    has_product_flag = product_context and product_context.get("product_name")
+    print(f"[COVER-TITLE] Product: {product_context.get('product_name') if has_product_flag else 'NONE'} → Title: \"{title}\"")
     print(f"[COVER-TITLE] Prompt (first 200 chars): {prompt[:200]}...")
 
     return title
