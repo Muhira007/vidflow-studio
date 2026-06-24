@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "Vidflow Studio"
     
     # Database Settings
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/auto_video_editor"
+    database_url: str = "postgresql://postgres:postgres@localhost:5432/vidflow_studio"
     
     # Celery & Redis
     redis_url: str = "redis://localhost:6379/0"

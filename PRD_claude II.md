@@ -4,11 +4,11 @@
 
 | Field | Detail |
 |---|---|
-| Nama Produk | **Vidflow Studio** — Automated affiliate video editing with streamlined workflow automation |
+| Nama Produk | **Vidflow Studio** — Automated affiliate video editing with AI-powered pipeline |
 | Versi Dokumen | 1.0 |
 | Tanggal | 20 Juni 2026 |
 | Status | Draft — siap dipakai sebagai acuan development |
-| Author | _(nama kamu)_ |
+| Author | **Dede Muhira (kang demuh)** |
 | Tipe Deploy | Local (MVP) → Server Online (fase lanjutan) |
 
 ---
@@ -282,10 +282,10 @@ graph TD
     B -->|Mengirim Task via Broker| D((Redis Queue))
     D -->|Celery Worker mengambil task| E{Pemrosesan Pipeline}
     
-    E -->|Step 1| F[Silence Cut via PySceneDetect/FFmpeg]
-    F -->|Step 2| G[Auto Caption via OpenAI]
-    G -->|Step 3| H[Auto Cover via PIL]
-    H -->|Step 4| I[Render Final Video]
+    E -->|Step 1| F[VAD/Silence Cut via Silero VAD + PySceneDetect/FFmpeg]
+    F -->|Step 2| G[Auto Caption via OpenAI Whisper + DeepSeek AI Social]
+    G -->|Step 3| H[Auto Cover via PIL + DeepSeek AI Title]
+    H -->|Step 4| I[Render Final Video multi-codec]
     
     I -->|Update status COMPLETED| C
     
@@ -477,10 +477,10 @@ erDiagram
 | Backend API | Python + FastAPI | Async, ekosistem kaya untuk audio/video processing |
 | Job Queue | Celery + Redis | Memisahkan proses berat dari request HTTP, mudah ditambah worker |
 | Database | PostgreSQL | Migrasi local → server tinggal ganti connection string |
-| Frontend Admin | React / Next.js | Cocok untuk dashboard interaktif (slider, color picker, dsb.) |
+| Frontend Admin | React + Vite | Cocok untuk dashboard interaktif (slider, color picker, dsb.) |
 | Video Engine | FFmpeg | Standar industri untuk cut, burn subtitle, render |
 | Folder Watcher | Python `watchdog` | Deteksi perubahan filesystem real-time |
-| Cover Generation | PySceneDetect + Pillow/OpenCV | Scene detection + compositing gambar + auto text-wrap |
+| Cover Generation | Pillow (PIL) | Compositing gambar + auto text-wrap + font adaptif |
 | VAD (Speech Detection) | Silero VAD (PyTorch) | Deteksi suara manusia vs noise, jalan lokal CPU |
 | AI Caption & Cover Title | DeepSeek V4 Flash API | Generate caption sosmed + judul cover dari transkrip |
 | Deployment (MVP Local) | Native WSL services + Shell scripts | PostgreSQL & Redis sebagai service native; `start-all.sh` untuk one-click startup |
@@ -543,7 +543,7 @@ erDiagram
 
 | Fase | Target Waktu | Output |
 |---|---|---|
-| Fase 0 — Setup | Minggu 1–2 | Struktur repo, schema DB awal, base Docker |
+| Fase 0 — Setup | Minggu 1–2 | Struktur repo, schema DB awal, native WSL services |
 | Fase 1 — Core Pipeline | Minggu 3–5 | Folder watcher, job queue, silence cut Level 1 & 2 |
 | Fase 2 — Auto Caption | Minggu 6–7 | Integrasi STT API, generate ASS, burn caption + kontrol admin |
 | Fase 3 — Auto Cover | Minggu 8 | Generate cover + AI judul (DeepSeek) + konfigurasi admin |
@@ -576,7 +576,7 @@ erDiagram
 
 ## 23. Pertanyaan Terbuka
 
-- Nama final aplikasi?
+- Nama final aplikasi? ~~Sudah diputuskan: **Vidflow Studio**~~
 - Provider hosting untuk fase server online (VPS biasa, cloud provider tertentu)?
 - Apakah suatu saat butuh multi-user/role, atau tetap single-admin selamanya?
 - Berapa lama retention policy untuk file output & file mentah setelah diproses?

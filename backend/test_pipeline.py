@@ -7,7 +7,7 @@ import redis
 from pprint import pprint
 
 API_BASE_URL = "http://localhost:8000/api/videos"
-DB_URL = "postgresql://postgres:postgres@localhost:5433/auto_video_editor"
+DB_URL = "postgresql://postgres:postgres@localhost:5433/vidflow_studio"
 REDIS_URL = "redis://localhost:6379/0"
 
 def print_step(step_name):

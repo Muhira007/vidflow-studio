@@ -58,11 +58,11 @@ pip install -r requirements.txt
 
 ### Langkah 3: Inisialisasi Database
 
-Pastikan database `auto_video_editor` sudah ada di PostgreSQL, lalu buat tabel:
+Pastikan database `vidflow_studio` sudah ada di PostgreSQL, lalu buat tabel:
 
 ```bash
 cd backend
-PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE auto_video_editor;" 2>/dev/null
+PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE vidflow_studio;" 2>/dev/null
 source venv/bin/activate
 python3 -c "from app.database import engine, Base; from app.models import Video, JobLog; Base.metadata.create_all(bind=engine); print('Tables created!')"
 ```
@@ -77,8 +77,8 @@ Cukup **double-click** shortcut yang tersedia di Desktop:
 
 | Shortcut | Fungsi |
 |----------|--------|
-| 🟢 **Start Video Editor.bat** | Menyalakan semua service |
-| 🔴 **Stop Video Editor.bat** | Mematikan semua service |
+| 🟢 **Start Vidflow Studio.bat** | Menyalakan semua service |
+| 🔴 **Stop Vidflow Studio.bat** | Mematikan semua service |
 
 > **PENTING:** Sebelum pertama kali, salin file `scripts/windows/.wslconfig` ke `C:\Users\<user>\.wslconfig`, lalu restart WSL dengan perintah `wsl --shutdown` di PowerShell. Ini mencegah WSL VM auto-shutdown sehingga service tetap berjalan meski jendela terminal ditutup.
 
@@ -131,7 +131,7 @@ Setelah start:
 
 ```ini
 # Database Connection
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/auto_video_editor"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/vidflow_studio"
 
 # Celery & Redis
 REDIS_URL="redis://localhost:6379/0"

@@ -1,15 +1,15 @@
 @echo off
-title Auto Video Editor - Start All Services
+title Vidflow Studio - Start All Services
 color 0B
 echo ========================================
-echo   Auto Video Editor -- Start via WSL
+echo   Vidflow Studio -- Start via WSL
 echo ========================================
 echo.
 echo Menjalankan semua service di WSL...
 echo (PostgreSQL + Redis + Backend + Celery + Frontend)
 echo.
 echo CATATAN: Service tetap berjalan meski jendela ini ditutup.
-echo Gunakan "Stop Video Editor.bat" untuk mematikan semua service.
+echo Gunakan "Stop Vidflow Studio.bat" untuk mematikan semua service.
 echo.
 
 :: Jalankan start script di WSL. Service di-start dengan nohup di background

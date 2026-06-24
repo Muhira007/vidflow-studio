@@ -20,7 +20,7 @@ Dokumen ini melacak status pengembangan aplikasi **Vidflow Studio** berdasarkan 
 - [x] Pembuatan skrip Integration Test (`test_pipeline.py`) untuk memvalidasi aliran data.
 
 ### Fase 3–5: Auto Caption, Cover, Render & Dashboard
-- [x] *Image generation* untuk cover video dinamis menggunakan PIL (4 template diimplementasikan).
+- [x] *Image generation* untuk cover video dinamis menggunakan PIL (3 template dual-color diimplementasikan).
 - [x] Render multi-resolusi (720p, 1080p, 4K) dengan *aspect-ratio aware scaling* terintegrasi.
 - [x] End-to-end integration test (`test_pipeline.py`) berjalan sukses dari Database → API → Celery Pipeline.
 - [x] Pembuatan In-Browser File Explorer: Drag & drop, Context Menu, Multi-select, sinkronisasi otomatis ke Database, desain UI solid dan kompatibilitas sentuh (Mobile friendly).
@@ -28,7 +28,7 @@ Dokumen ini melacak status pengembangan aplikasi **Vidflow Studio** berdasarkan 
 ### Stabilitas & Developer Experience (Juni 2026)
 - [x] **Migrasi dari Docker ke Native Services:** PostgreSQL dan Redis sekarang berjalan sebagai service native WSL untuk performa lebih baik dan startup lebih cepat.
 - [x] **One-Click Startup:** Pembuatan skrip `start-all.sh` dan `stop-all.sh` — satu perintah untuk menjalankan/mematikan PostgreSQL, Redis, Backend, Celery, dan Frontend.
-- [x] **Windows Desktop Launcher:** File `.bat` di Desktop Windows (`Start Video Editor.bat` / `Stop Video Editor.bat`) — double-click untuk menjalankan semua service tanpa perlu buka terminal WSL manual.
+- [x] **Windows Desktop Launcher:** File `.bat` di Desktop Windows (`Start Vidflow Studio.bat` / `Stop Vidflow Studio.bat`) — double-click untuk menjalankan semua service tanpa perlu buka terminal WSL manual.
 - [x] **CORS Error Fix:** Menambahkan `CORSOnErrorMiddleware` untuk memastikan response HTTP 500 tetap menyertakan CORS headers — memperbaiki pesan "Network Error" yang tidak jelas di frontend.
 - [x] **Error Handling Frontend:** Pesan error `handleSync` dan `submitCreateFolder` kini menampilkan detail yang lebih informatif (beda antara network error, server error, dan error spesifik).
 - [x] **Pembersihan File Sampah:** Menghapus 6 file tidak terpakai (`docker-compose.yml`, `Tutorial Running.txt`, `frontend/README.md` boilerplate Vite, `PRD_claude II.md:Zone.Identifier` Windows ADS, `start.sh` lama, `stop.sh` lama).
@@ -89,7 +89,7 @@ graph TD
 - **PostgreSQL** native WSL port **5432**. Start: `sudo pg_ctlcluster 18 main start`.
 - **Redis** native WSL port **6379**. Start: `sudo service redis-server start`.
 - **Frontend Vite** port **5173**, **Backend FastAPI** port **8000**.
-- **One-click startup:** `./start-all.sh` (WSL) atau double-click `Start Video Editor.bat` (Windows Desktop).
+- **One-click startup:** `./start-all.sh` (WSL) atau double-click `Start Vidflow Studio.bat` (Windows Desktop).
 - **Celery tidak auto-reload.** Setiap perubahan kode Python di backend, restart Celery.
 - **DeepSeek V4 Flash** — OpenAI-compatible, reasoning mode harus dinonaktifkan (`extra_body={"thinking": {"type": "disabled"}}`).
 - **Silero VAD** — 1.6MB model, CPU-only via PyTorch. Akurasi >90% deteksi suara manusia vs noise.

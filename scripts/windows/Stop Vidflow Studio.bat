@@ -1,8 +1,8 @@
 @echo off
-title Auto Video Editor - Stop All Services
+title Vidflow Studio - Stop All Services
 color 0C
 echo ========================================
-echo   Auto Video Editor -- Stop via WSL
+echo   Vidflow Studio -- Stop via WSL
 echo ========================================
 echo.
 echo Menghentikan semua service...
