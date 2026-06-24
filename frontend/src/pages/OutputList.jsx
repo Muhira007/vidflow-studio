@@ -21,7 +21,7 @@ export default function OutputList() {
 
   const fetchOutputs = async () => {
     try {
-      const res = await api.get('/outputs');
+      const res = await api.get('/outputs/');
       setOutputs(res.data || []);
       setLoading(false);
     } catch (error) {

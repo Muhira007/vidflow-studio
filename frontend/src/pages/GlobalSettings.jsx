@@ -9,7 +9,7 @@ export default function GlobalSettings() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    api.get('/settings')
+    api.get('/settings/')
       .then(res => {
         setOpenaiKey(res.data.openai_api_key || '');
         setDeepseekKey(res.data.deepseek_api_key || '');
@@ -20,7 +20,7 @@ export default function GlobalSettings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await api.put('/settings', {
+      await api.put('/settings/', {
         openai_api_key: openaiKey,
         deepseek_api_key: deepseekKey
       });

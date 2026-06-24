@@ -13,7 +13,7 @@ export default function VideoList() {
 
   const fetchVideos = async () => {
     try {
-      const response = await api.get('/videos');
+      const response = await api.get('/videos/');
       setVideos(response.data);
       setLoading(false);
     } catch (error) {
