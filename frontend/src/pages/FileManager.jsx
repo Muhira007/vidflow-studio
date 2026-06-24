@@ -4,6 +4,30 @@ import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2
 import api from '../api';
 import toast from 'react-hot-toast';
 
+// Helper: format bytes ke human-readable
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Helper: format speed ke human-readable
+function formatSpeed(bytesPerSec) {
+  if (!bytesPerSec || bytesPerSec < 1) return '0 B/s';
+  return formatBytes(bytesPerSec) + '/s';
+}
+
+// Helper: format detik ke "Xm Ys" atau "Xs"
+function formatTime(seconds) {
+  if (!seconds || seconds < 0.5) return '';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function FileManager() {
   const [items, setItems] = useState([]);
   const [currentFolder, setCurrentFolder] = useState(null); // null means root
@@ -34,8 +58,23 @@ export default function FileManager() {
   const [playerVideoUrl, setPlayerVideoUrl] = useState('');
   const [playerVideoName, setPlayerVideoName] = useState('');
 
+  // Upload Progress State
+  const [uploadState, setUploadState] = useState({
+    active: false,        // upload sedang berjalan
+    fileName: '',         // nama file yang sedang diupload
+    progress: 0,          // persentase (0-100)
+    loaded: 0,            // bytes terupload
+    total: 0,             // total bytes
+    speed: 0,             // bytes/detik
+    startTime: 0,         // timestamp mulai upload file ini
+  });
+
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const uploadStateRef = useRef(null);  // ref untuk akses uploadState di callback
+
+  // Sync ref dengan uploadState untuk akses di onUploadProgress
+  useEffect(() => { uploadStateRef.current = uploadState; }, [uploadState]);
 
   const fetchItems = async () => {
     try {
@@ -358,7 +397,6 @@ export default function FileManager() {
 
     let success = 0;
     let failed = 0;
-    const loadingToast = toast.loading(`Mengupload ${files.length} file ke ${currentFolder}... (0/${files.length})`);
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -366,23 +404,40 @@ export default function FileManager() {
       formData.append('video_id', currentFolder);
       formData.append('file', file);
 
+      // Init progress untuk file ini
+      setUploadState({
+        active: true, fileName: file.name,
+        progress: 0, loaded: 0, total: file.size,
+        speed: 0, startTime: Date.now(),
+      });
+
       try {
         await api.post('/videos/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            const { loaded, total } = progressEvent;
+            const elapsed = (Date.now() - uploadStateRef.current.startTime) / 1000;
+            setUploadState(prev => ({
+              ...prev,
+              loaded, total,
+              progress: total ? Math.round((loaded * 100) / total) : 0,
+              speed: elapsed > 0 ? loaded / elapsed : 0,
+            }));
+          },
         });
         success++;
       } catch (error) {
         failed++;
         console.error(`Gagal upload ${file.name}:`, error);
+        toast.error(`Gagal upload ${file.name}`);
       }
-      // Update progress
-      toast.loading(`Mengupload ${files.length} file ke ${currentFolder}... (${i + 1}/${files.length})`, { id: loadingToast });
     }
 
-    if (failed === 0) {
-      toast.success(`${success} file berhasil diupload!`, { id: loadingToast });
-    } else {
-      toast.error(`${success} berhasil, ${failed} gagal`, { id: loadingToast });
+    setUploadState(prev => ({ ...prev, active: false }));
+    if (failed === 0 && success > 0) {
+      toast.success(`${success} file berhasil diupload!`);
+    } else if (failed > 0) {
+      toast.error(`${success} berhasil, ${failed} gagal`);
     }
     fetchItems();
     e.target.value = null;
@@ -402,7 +457,6 @@ export default function FileManager() {
 
     let success = 0;
     let failed = 0;
-    const loadingToast = toast.loading(`Mengupload ${files.length} file ke ${folderId}... (0/${files.length})`);
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -410,22 +464,39 @@ export default function FileManager() {
       formData.append('video_id', folderId);
       formData.append('file', file);
 
+      setUploadState({
+        active: true, fileName: file.name,
+        progress: 0, loaded: 0, total: file.size,
+        speed: 0, startTime: Date.now(),
+      });
+
       try {
         await api.post('/videos/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            const { loaded, total } = progressEvent;
+            const elapsed = (Date.now() - uploadStateRef.current.startTime) / 1000;
+            setUploadState(prev => ({
+              ...prev,
+              loaded, total,
+              progress: total ? Math.round((loaded * 100) / total) : 0,
+              speed: elapsed > 0 ? loaded / elapsed : 0,
+            }));
+          },
         });
         success++;
       } catch (error) {
         failed++;
         console.error(`Gagal upload ${file.name}:`, error);
+        toast.error(`Gagal upload ${file.name}`);
       }
-      toast.loading(`Mengupload ${files.length} file ke ${folderId}... (${i + 1}/${files.length})`, { id: loadingToast });
     }
 
-    if (failed === 0) {
-      toast.success(`${success} file berhasil diupload ke ${folderId}!`, { id: loadingToast });
-    } else {
-      toast.error(`${success} berhasil, ${failed} gagal`, { id: loadingToast });
+    setUploadState(prev => ({ ...prev, active: false }));
+    if (failed === 0 && success > 0) {
+      toast.success(`${success} file berhasil diupload ke ${folderId}!`);
+    } else if (failed > 0) {
+      toast.error(`${success} berhasil, ${failed} gagal`);
     }
     fetchItems();
   };
@@ -827,6 +898,82 @@ export default function FileManager() {
               >
                 Browser Anda tidak mendukung pemutaran video HTML5.
               </video>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Progress Overlay */}
+      {uploadState.active && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(12px)',
+          zIndex: 9998, padding: '20px 24px',
+          borderTop: '1px solid var(--border-color)',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          <div style={{
+            maxWidth: '700px', margin: '0 auto',
+            display: 'flex', alignItems: 'center', gap: '16px'
+          }}>
+            {/* Icon */}
+            <div style={{
+              width: '42px', height: '42px', borderRadius: '10px',
+              background: 'rgba(59, 130, 246, 0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <UploadCloud size={22} style={{ color: 'var(--accent-primary)' }} />
+            </div>
+
+            {/* Info + Progress */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                marginBottom: '8px', fontSize: '0.9rem'
+              }}>
+                <span style={{
+                  color: 'var(--text-primary)', fontWeight: 600,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  marginRight: '12px'
+                }}>
+                  {uploadState.fileName}
+                </span>
+                <span style={{ color: 'var(--accent-primary)', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                  {uploadState.progress}%
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{
+                height: '6px', background: 'rgba(255,255,255,0.1)',
+                borderRadius: '3px', overflow: 'hidden', marginBottom: '8px'
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${uploadState.progress}%`,
+                  background: 'var(--accent-primary)',
+                  borderRadius: '3px',
+                  transition: 'width 0.3s ease-out'
+                }} />
+              </div>
+
+              {/* Speed + Size */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                fontSize: '0.75rem', color: 'var(--text-muted)'
+              }}>
+                <span>
+                  {formatBytes(uploadState.loaded)} / {formatBytes(uploadState.total)}
+                  {' · '}
+                  {formatSpeed(uploadState.speed)}
+                </span>
+                <span>
+                  {uploadState.speed > 0 && uploadState.total > uploadState.loaded
+                    ? `≈ ${formatTime((uploadState.total - uploadState.loaded) / uploadState.speed)}`
+                    : ''}
+                </span>
+              </div>
             </div>
           </div>
         </div>
