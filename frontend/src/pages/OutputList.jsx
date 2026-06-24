@@ -82,8 +82,8 @@ export default function OutputList() {
   };
 
   const handleDownload = (videoId) => {
-    const url = `${basePath}/outputs/${videoId}/download`;
-    // Buka di tab baru untuk trigger download
+    const token = localStorage.getItem('vidflow_token');
+    const url = `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
     window.open(url, '_blank');
   };
 
