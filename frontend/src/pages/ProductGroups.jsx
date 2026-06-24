@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Tag, RefreshCw, Save, Package, Search, Folder, Check, Loader2 } from 'lucide-react';
+import { Tag, RefreshCw, Save, Package, Search, Folder, Check, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api';
 
@@ -89,6 +89,17 @@ export default function ProductGroups() {
       toast.error('Gagal menyimpan: ' + (err.response?.data?.detail || err.message));
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const handleDelete = async (groupId) => {
+    if (!confirm(`Hapus grup "${groupId}"?\n\nHanya menghapus data produk, TIDAK menghapus folder/video.`)) return;
+    try {
+      await api.delete(`/groups/${groupId}`);
+      toast.success(`Grup "${groupId}" dihapus`);
+      setGroups(prev => prev.filter(g => g.id !== groupId));
+    } catch (err) {
+      toast.error('Gagal menghapus: ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -189,6 +200,14 @@ export default function ProductGroups() {
                         <span className="badge badge-secondary" style={{ fontSize: '0.8rem' }}>
                           {group.video_count || 0} video
                         </span>
+                        <button
+                          onClick={() => handleDelete(group.id)}
+                          className="btn btn-secondary"
+                          style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                          title="Hapus grup"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                         {hasName && !dirty && (
                           <span style={{ fontSize: '0.75rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '3px' }}>
                             <Check size={12} /> tersimpan

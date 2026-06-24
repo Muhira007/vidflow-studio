@@ -122,6 +122,18 @@ def update_group(group_id: str, data: ProductGroupUpdate, db: Session = Depends(
     )
 
 
+@router.delete("/{group_id}")
+def delete_group(group_id: str, db: Session = Depends(get_db)):
+    """Hapus ProductGroup (tidak menghapus folder/video di source)."""
+    group = db.query(ProductGroup).filter(ProductGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Grup tidak ditemukan")
+
+    db.delete(group)
+    db.commit()
+    return {"message": f"Grup '{group_id}' dihapus"}
+
+
 @router.post("/sync", response_model=dict)
 def sync_groups(db: Session = Depends(get_db)):
     """Scan source/ directory and create ProductGroup records for new folders."""
