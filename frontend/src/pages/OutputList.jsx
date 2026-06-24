@@ -81,10 +81,41 @@ export default function OutputList() {
     }
   };
 
-  const handleDownload = (videoId) => {
-    const token = localStorage.getItem('vidflow_token');
-    const url = `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
-    window.open(url, '_blank');
+  const handleDownload = async (videoId) => {
+    const loadingToast = toast.loading('Menyiapkan download...');
+    try {
+      const token = localStorage.getItem('vidflow_token');
+      const url = `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
+
+      // Download via fetch → blob → trigger save dialog
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Ambil nama file dari Content-Disposition header, atau fallback
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = videoId.split('/').pop() + '.mp4';
+      if (disposition) {
+        const match = disposition.match(/filename="?(.+?)"?$/);
+        if (match) filename = match[1];
+      }
+
+      // Trigger download
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+
+      toast.success('Download dimulai!', { id: loadingToast });
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.error('Gagal download: ' + err.message, { id: loadingToast });
+    }
   };
 
   const handleToggleUploaded = async (videoId) => {
