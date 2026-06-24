@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Video,
@@ -14,11 +14,14 @@ import {
   UploadCloud,
   Folder,
   Film,
-  Tag
+  Tag,
+  LogOut
 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
+import api from './api';
 
 // Pages
+import Login from './pages/Login';
 import DashboardOverview from './pages/DashboardOverview';
 import FileManager from './pages/FileManager';
 import ErrorBoundary from './ErrorBoundary';
@@ -84,6 +87,52 @@ function Sidebar({ isOpen, setIsOpen }) {
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Cek token yang sudah ada saat mount
+  useEffect(() => {
+    const token = localStorage.getItem('vidflow_token');
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Verifikasi token masih valid
+      api.get('/auth/me')
+        .then(() => setIsAuthenticated(true))
+        .catch(() => {
+          localStorage.removeItem('vidflow_token');
+          localStorage.removeItem('vidflow_user');
+        })
+        .finally(() => setAuthChecked(true));
+    } else {
+      setAuthChecked(true);
+    }
+  }, []);
+
+  const handleLogin = () => setIsAuthenticated(true);
+
+  const handleLogout = () => {
+    localStorage.removeItem('vidflow_token');
+    localStorage.removeItem('vidflow_user');
+    delete api.defaults.headers.common['Authorization'];
+    setIsAuthenticated(false);
+  };
+
+  if (!authChecked) {
+    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+      <div style={{ color: 'var(--text-secondary)' }}>Loading...</div>
+    </div>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Toaster position="top-right" toastOptions={{
+          style: { background: 'rgba(30, 41, 59, 0.9)', color: '#fff', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)' }
+        }} />
+        <Login onLogin={handleLogin} />
+      </>
+    );
+  }
 
   return (
     <Router>
@@ -97,7 +146,7 @@ function App() {
       }} />
       <div className="app-container">
         <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-        
+
         <main className="main-content">
           <header className="top-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -108,10 +157,17 @@ function App() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span className="badge badge-success hide-mobile">System Online</span>
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}
+              >
+                <LogOut size={16} />
+              </button>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>V</div>
             </div>
           </header>
-          
+
           <div className="page-content">
             <Routes>
               <Route path="/" element={<DashboardOverview />} />

@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Scope, Receive, Send
 from sqlalchemy import text
+
 
 class CORSOnErrorMiddleware:
     """Ensure CORS headers are present on ALL responses, including 500 errors.
@@ -46,6 +47,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ─── Public endpoints (no auth) ───
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Vidflow Studio API"}
@@ -53,44 +57,57 @@ def read_root():
 
 @app.get("/api/health")
 def health_check():
-    """Health check endpoint untuk monitoring (Uptime Kuma, Docker healthcheck, dsb)."""
+    """Health check endpoint untuk monitoring."""
     from datetime import datetime, timezone
     from app.database import SessionLocal
     from app.config import settings
 
-    status = {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+    result = {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
 
     # Check DB
     try:
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db.close()
-        status["database"] = "ok"
+        result["database"] = "ok"
     except Exception as e:
-        status["database"] = f"error: {str(e)[:100]}"
-        status["status"] = "degraded"
+        result["database"] = f"error: {str(e)[:100]}"
+        result["status"] = "degraded"
 
     # Check Redis
     try:
         import redis as redis_lib
         r = redis_lib.from_url(settings.redis_url)
         r.ping()
-        status["redis"] = "ok"
+        result["redis"] = "ok"
     except Exception as e:
-        status["redis"] = f"error: {str(e)[:100]}"
-        status["status"] = "degraded"
+        result["redis"] = f"error: {str(e)[:100]}"
+        result["status"] = "degraded"
 
-    return status
+    return result
 
 
-# Include routers
-from app.routers import videos, settings, dashboard, fs, output, groups
-app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
-app.include_router(videos.router, prefix="/api/videos", tags=["Videos"])
-app.include_router(output.router, prefix="/api/outputs", tags=["Outputs"])
-app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
-app.include_router(fs.router, prefix="/api/fs", tags=["FileSystem"])
-app.include_router(groups.router, prefix="/api/groups", tags=["Groups"])
+# ─── Auth router (public — login endpoint) ───
+from app.routers import auth  # noqa: E402
+from app.auth import init_admin_password, verify_token  # noqa: E402
+
+# Init admin password hash on startup
+init_admin_password()
+
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+
+
+# ─── Protected API routers (JWT required) ───
+from app.routers import videos, settings, dashboard, fs, output, groups  # noqa: E402
+
+PROTECTED = [Depends(verify_token)]
+
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"], dependencies=PROTECTED)
+app.include_router(videos.router, prefix="/api/videos", tags=["Videos"], dependencies=PROTECTED)
+app.include_router(output.router, prefix="/api/outputs", tags=["Outputs"], dependencies=PROTECTED)
+app.include_router(settings.router, prefix="/api/settings", tags=["Settings"], dependencies=PROTECTED)
+app.include_router(fs.router, prefix="/api/fs", tags=["FileSystem"], dependencies=PROTECTED)
+app.include_router(groups.router, prefix="/api/groups", tags=["Groups"], dependencies=PROTECTED)
 
 # Wrap the app to guarantee CORS headers on error responses (e.g. 500)
 app = CORSOnErrorMiddleware(app)
