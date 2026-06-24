@@ -197,6 +197,11 @@ def sync_videos(db: Session = Depends(get_db)):
 
             existing = db.query(Video).filter(Video.id == video_id).first()
             if existing:
+                # Perbaiki source info jika kosong (migrasi dari versi lama)
+                if not existing.source_filename:
+                    existing.source_filename = file_name
+                    existing.source_folder = folder_name
+                    db.flush()
                 continue
 
             new_vid = Video(
