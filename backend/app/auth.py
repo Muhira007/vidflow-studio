@@ -3,10 +3,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 # Config
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "vidflow-studio-secret-change-in-production")
@@ -17,7 +17,6 @@ ACCESS_TOKEN_EXPIRE_HOURS = 24
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD_HASH = None  # Akan di-set saat startup
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 
@@ -25,14 +24,20 @@ def init_admin_password():
     """Hash password admin dari environment variable saat startup."""
     global ADMIN_PASSWORD_HASH
     raw_password = os.getenv("ADMIN_PASSWORD", "admin")
-    ADMIN_PASSWORD_HASH = pwd_context.hash(raw_password)
+    ADMIN_PASSWORD_HASH = bcrypt.hashpw(
+        raw_password.encode("utf-8"),
+        bcrypt.gensalt()
+    )
 
 
 def verify_admin(username: str, password: str) -> bool:
     """Verifikasi kredensial admin."""
     if username != ADMIN_USERNAME:
         return False
-    return pwd_context.verify(password, ADMIN_PASSWORD_HASH)
+    return bcrypt.checkpw(
+        password.encode("utf-8"),
+        ADMIN_PASSWORD_HASH
+    )
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
