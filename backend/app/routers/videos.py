@@ -175,6 +175,7 @@ def sync_videos(db: Session = Depends(get_db)):
     import string
 
     added = 0
+    patched = 0
     for folder_name in os.listdir(source_dir):
         folder_path = os.path.join(source_dir, folder_name)
         if not os.path.isdir(folder_path):
@@ -201,6 +202,7 @@ def sync_videos(db: Session = Depends(get_db)):
                 if not existing.source_filename:
                     existing.source_filename = file_name
                     existing.source_folder = folder_name
+                    patched += 1
                     db.flush()
                 continue
 
@@ -220,9 +222,9 @@ def sync_videos(db: Session = Depends(get_db)):
             db.flush()  # simpan segera agar seq number berikutnya terhitung
             added += 1
 
-    if added > 0:
+    if added > 0 or patched > 0:
         db.commit()
-    return {"message": f"Synced successfully", "added": added}
+    return {"message": f"Synced successfully", "added": added, "patched": patched}
 
 import shutil
 from fastapi import File, UploadFile, Form
