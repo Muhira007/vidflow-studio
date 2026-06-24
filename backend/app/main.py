@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Scope, Receive, Send
+from sqlalchemy import text
 
 class CORSOnErrorMiddleware:
     """Ensure CORS headers are present on ALL responses, including 500 errors.
@@ -48,6 +49,39 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Vidflow Studio API"}
+
+
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint untuk monitoring (Uptime Kuma, Docker healthcheck, dsb)."""
+    from datetime import datetime, timezone
+    from app.database import SessionLocal
+    from app.config import settings
+
+    status = {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+    # Check DB
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        status["database"] = "ok"
+    except Exception as e:
+        status["database"] = f"error: {str(e)[:100]}"
+        status["status"] = "degraded"
+
+    # Check Redis
+    try:
+        import redis as redis_lib
+        r = redis_lib.from_url(settings.redis_url)
+        r.ping()
+        status["redis"] = "ok"
+    except Exception as e:
+        status["redis"] = f"error: {str(e)[:100]}"
+        status["status"] = "degraded"
+
+    return status
+
 
 # Include routers
 from app.routers import videos, settings, dashboard, fs, output, groups

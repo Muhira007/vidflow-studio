@@ -1,1 +1,11 @@
-venv/\nnode_modules/\n__pycache__/\n*.mp4\n.env
+venv/
+node_modules/
+__pycache__/
+*.mp4
+.env
+.env.production
+*.pid
+logs/*.log
+source/
+output/
+tmp/
