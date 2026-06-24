@@ -7,8 +7,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from app.database import SessionLocal
 from app.models import Video
-
-SOURCE_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
+from app.paths import SOURCE_DIR
 
 class VideoFolderHandler(FileSystemEventHandler):
     def on_created(self, event):

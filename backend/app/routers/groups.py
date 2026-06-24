@@ -9,10 +9,9 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models import ProductGroup, Video
 from app.schemas import ProductGroupResponse, ProductGroupUpdate
+from app.paths import SOURCE_DIR
 
 router = APIRouter()
-
-SOURCE_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
 
 
 @router.get("/", response_model=list[ProductGroupResponse])

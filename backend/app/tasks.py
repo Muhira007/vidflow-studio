@@ -10,6 +10,7 @@ from app.services.stt_service import transcribe_with_openai, burn_subtitles_to_v
 from app.services.cover_gen import extract_representative_frame, generate_cover_image
 from app.services.vad_service import detect_speech_segments
 from app.services.caption_rewriter import generate_social_caption, generate_cover_title
+from app.paths import SOURCE_DIR, TMP_DIR, OUTPUT_DIR, GLOBAL_SETTINGS_FILE
 
 
 def queue_next_waiting():
@@ -83,7 +84,7 @@ def process_video_pipeline(self, video_id: str):
         else:
             print(f"[PIPELINE] No product context for '{src_folder}' — AI will use transcript only")
 
-        source_dir = f"/home/kangdemuh/aplikasi/video-editor/claude2/source/{src_folder}"
+        source_dir = os.path.join(SOURCE_DIR, src_folder)
 
         # Cari file sumber: cocokkan nama file tanpa ekstensi
         input_file = None
@@ -108,7 +109,7 @@ def process_video_pipeline(self, video_id: str):
 
         # tmp pakai nama aman (ganti / dengan _)
         safe_id = video_id.replace("/", "_")
-        tmp_folder = f"/home/kangdemuh/aplikasi/video-editor/claude2/tmp/{safe_id}"
+        tmp_folder = os.path.join(TMP_DIR, safe_id)
         os.makedirs(tmp_folder, exist_ok=True)
 
         # ═══════════════════════════════════════════════════
@@ -215,7 +216,7 @@ def process_video_pipeline(self, video_id: str):
         subtitle_ass = os.path.join(tmp_folder, f"{safe_id}.ass")
 
         # Baca global settings SEKALI untuk dipakai semua step
-        settings_file = "/home/kangdemuh/aplikasi/video-editor/claude2/backend/app/global_settings.json"
+        settings_file = GLOBAL_SETTINGS_FILE
         gs = {}
         if os.path.exists(settings_file):
             with open(settings_file, "r") as f:
@@ -273,7 +274,7 @@ def process_video_pipeline(self, video_id: str):
         db.add(log)
         db.commit()
 
-        output_folder = f"/home/kangdemuh/aplikasi/video-editor/claude2/output/{src_folder}"
+        output_folder = os.path.join(OUTPUT_DIR, src_folder)
         os.makedirs(output_folder, exist_ok=True)
 
         base_frame_path = os.path.join(tmp_folder, f"{safe_id}_frame.jpg")

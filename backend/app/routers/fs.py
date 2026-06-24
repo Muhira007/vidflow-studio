@@ -7,11 +7,9 @@ from typing import List
 
 from app.database import get_db
 from app.models import ProductGroup, Video, JobLog
+from app.paths import SOURCE_DIR as BASE_DIR, TMP_DIR, OUTPUT_DIR
 
 router = APIRouter()
-BASE_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
-TMP_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/tmp"
-OUTPUT_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/output"
 
 @router.get("/list")
 def list_directory(db: Session = Depends(get_db)):

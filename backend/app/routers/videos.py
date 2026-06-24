@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models import Video, JobLog, ProductGroup, VideoStatus
 from app.schemas import VideoResponse, VideoDetailResponse
 from app.tasks import process_video_pipeline
+from app.paths import SOURCE_DIR, OUTPUT_DIR, TMP_DIR, GLOBAL_SETTINGS_FILE
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ def get_videos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 import json
 import os
 
-SETTINGS_FILE = "/home/kangdemuh/aplikasi/video-editor/claude2/backend/app/global_settings.json"
+SETTINGS_FILE = GLOBAL_SETTINGS_FILE
 
 def get_global_settings():
     if os.path.exists(SETTINGS_FILE):
@@ -158,7 +159,7 @@ def restore_video(video_id: str, db: Session = Depends(get_db)):
 
 @router.post("/sync")
 def sync_videos(db: Session = Depends(get_db)):
-    source_dir = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
+    source_dir = SOURCE_DIR
     if not os.path.exists(source_dir):
         return {"message": "Source directory does not exist", "added": 0}
 
@@ -235,7 +236,6 @@ def delete_video(video_id: str, db: Session = Depends(get_db)):
     db.commit()
     
     # Delete physical files
-    base_dir = "/home/kangdemuh/aplikasi/video-editor/claude2"
     src_folder = video.source_folder or video_id
 
     # Parse file name dari video_id (format: "FOLDER/filename")
@@ -245,7 +245,7 @@ def delete_video(video_id: str, db: Session = Depends(get_db)):
         file_name = video_id
 
     # Hapus file output: output/{folder}/{file_name}_*
-    out_dir = os.path.join(base_dir, "output", src_folder)
+    out_dir = os.path.join(OUTPUT_DIR, src_folder)
     if os.path.isdir(out_dir):
         for f in os.listdir(out_dir):
             if f.startswith(file_name):
@@ -261,7 +261,7 @@ def delete_video(video_id: str, db: Session = Depends(get_db)):
             pass
 
     # Hapus file sumber + folder source jika kosong
-    src_dir = os.path.join(base_dir, "source", src_folder)
+    src_dir = os.path.join(SOURCE_DIR, src_folder)
     if video.source_filename:
         src_path = os.path.join(src_dir, video.source_filename)
         if os.path.isfile(src_path):
@@ -279,7 +279,7 @@ def delete_video(video_id: str, db: Session = Depends(get_db)):
 
     # Hapus folder tmp — safe_id replaces / with _
     safe_id = video_id.replace("/", "_")
-    tmp_dir = os.path.join(base_dir, "tmp", safe_id)
+    tmp_dir = os.path.join(TMP_DIR, safe_id)
     if os.path.isdir(tmp_dir):
         try:
             shutil.rmtree(tmp_dir)
@@ -290,7 +290,7 @@ def delete_video(video_id: str, db: Session = Depends(get_db)):
 
 @router.post("/upload")
 async def upload_video(video_id: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
-    base_dir = "/home/kangdemuh/aplikasi/video-editor/claude2/source"
+    base_dir = SOURCE_DIR
     target_dir = os.path.join(base_dir, video_id)
     
     # Create folder if it doesn't exist

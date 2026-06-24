@@ -9,11 +9,9 @@ from datetime import datetime, timezone
 from app.database import get_db
 from app.models import Video, VideoStatus, JobLog
 from app.schemas import VideoResponse
+from app.paths import APP_HOME as BASE_DIR, OUTPUT_DIR
 
 router = APIRouter()
-
-BASE_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2"
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 SOURCE_DIR = os.path.join(BASE_DIR, "source")
 TMP_DIR = os.path.join(BASE_DIR, "tmp")
 
@@ -118,7 +116,8 @@ def get_social_caption(video_id: str, db: Session = Depends(get_db)):
         from app.models import ProductGroup
         import json
 
-        settings_file = "/home/kangdemuh/aplikasi/video-editor/claude2/backend/app/global_settings.json"
+        from app.paths import GLOBAL_SETTINGS_FILE
+        settings_file = GLOBAL_SETTINGS_FILE
         gs_cap = {}
         if os.path.exists(settings_file):
             with open(settings_file, "r") as f:

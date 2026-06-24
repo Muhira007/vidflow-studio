@@ -252,7 +252,8 @@ def generate_cover_image(
 
     # Overlay template PNG if it's a custom template
     if template.startswith("custom_"):
-        overlay_path = f"/home/kangdemuh/aplikasi/video-editor/claude2/frontend/public/covers/{template}.png"
+        from app.paths import COVER_TEMPLATES_DIR
+        overlay_path = os.path.join(COVER_TEMPLATES_DIR, f"{template}.png")
         if os.path.exists(overlay_path):
             try:
                 overlay_img = Image.open(overlay_path).convert("RGBA")

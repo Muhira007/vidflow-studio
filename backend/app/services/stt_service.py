@@ -160,7 +160,8 @@ def burn_subtitles_to_video(input_video: str, subtitle_file: str, output_video: 
     """Burns the subtitle (ASS/SRT) file into the video using FFmpeg"""
     
     # Baca pengaturan
-    settings_file = "/home/kangdemuh/aplikasi/video-editor/claude2/backend/app/global_settings.json"
+    from app.paths import GLOBAL_SETTINGS_FILE
+    settings_file = GLOBAL_SETTINGS_FILE
     settings = {}
     if os.path.exists(settings_file):
         with open(settings_file, "r") as f:

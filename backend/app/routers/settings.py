@@ -2,11 +2,12 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from dotenv import set_key, dotenv_values
 import os
+from app.paths import BACKEND_DIR
 
 router = APIRouter()
 
 # Path to the .env file
-ENV_PATH = "/home/kangdemuh/aplikasi/video-editor/claude2/backend/.env"
+ENV_PATH = os.path.join(BACKEND_DIR, ".env")
 
 class GlobalSettingsUpdate(BaseModel):
     openai_api_key: str | None = None
