@@ -108,6 +108,34 @@ Setelah start:
 - **API Documentation:** [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Logs:** `./logs/` (backend.log, frontend.log, celery.log)
 
+### 📱 Akses dari HP Android (WiFi yang sama)
+
+Frontend lokal bisa diakses dari HP melalui jaringan WiFi yang sama. Perlu setup **port forwarding** satu kali:
+
+**1. Jalankan PowerShell sebagai Administrator di Windows, lalu copy-paste 4 command ini:**
+
+```powershell
+# Forward port Frontend (5173) dan Backend (8000) dari Windows ke WSL
+netsh interface portproxy add v4tov4 listenport=5173 connectaddress=172.23.13.2 connectport=5173
+netsh interface portproxy add v4tov4 listenport=8000 connectaddress=172.23.13.2 connectport=8000
+
+# Buka Windows Firewall
+netsh advfirewall firewall add rule name="Vidflow5173" dir=in action=allow protocol=tcp localport=5173
+netsh advfirewall firewall add rule name="Vidflow8000" dir=in action=allow protocol=tcp localport=8000
+```
+
+**2. Cari IP Windows kamu:**
+
+Di PowerShell, ketik `ipconfig` — cari `IPv4 Address` di adapter WiFi. Contoh: `192.168.1.15`
+
+**3. Dari HP, buka browser dan akses:**
+
+```
+http://192.168.1.15:5173
+```
+
+> 💡 **Catatan:** IP WSL (`172.23.13.2`) bisa berubah setelah restart Windows. Kalau tiba-tiba nggak bisa akses dari HP, cek IP WSL terbaru dengan: `wsl hostname -I` — lalu update portproxy dengan IP baru.
+
 ---
 
 ## 💡 Cara Penggunaan (Workflow)
