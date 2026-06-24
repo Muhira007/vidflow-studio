@@ -323,7 +323,7 @@ export default function VideoList() {
 
       <div className="card glass-panel">
         <div className="table-responsive">
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '16px 8px', fontWeight: 500, width: '44px', textAlign: 'center' }}>

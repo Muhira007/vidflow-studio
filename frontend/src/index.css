@@ -363,6 +363,29 @@ h1, h2, h3, h4, h5, h6 {
 .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
 .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
 .badge-info { background: rgba(14, 165, 233, 0.15); color: var(--info); }
+.badge-primary { background: rgba(59, 130, 246, 0.15); color: var(--accent-primary); }
+.badge-secondary { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); }
+
+/* Danger Button */
+.btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+}
+.btn-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Spinner Animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spinner { animation: spin 1s linear infinite; }
+
+/* Hover Utilities */
+.hover-bg-light:hover { background: rgba(255,255,255,0.05); }
 
 /* Switch Toggle */
 .switch {
@@ -443,4 +466,154 @@ input:checked + .slider:before {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ── Bottom Navigation Bar (Mobile) ── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(21, 27, 43, 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-color);
+  z-index: 99;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.bottom-nav a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.65rem;
+  font-weight: 500;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+
+.bottom-nav a.active {
+  color: var(--accent-primary);
+}
+
+.bottom-nav a svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Phone Breakpoint (480px) ── */
+@media (max-width: 480px) {
+  :root {
+    --header-height: 56px;
+  }
+
+  body {
+    padding-bottom: 60px; /* space for bottom nav */
+    font-size: 0.9rem;
+  }
+
+  .page-title { font-size: 1.25rem; }
+  .page-subtitle { font-size: 0.85rem; margin-bottom: 20px; }
+  .page-content { padding: 12px; }
+
+  .top-header {
+    padding: 0 12px;
+    height: 56px;
+  }
+
+  .header-title { display: none; }
+
+  .btn {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    min-height: 40px;
+  }
+
+  .card, .glass-panel {
+    padding: 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .form-control {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+
+  /* Tables → card-like rows */
+  .table-responsive table {
+    min-width: 0 !important;
+    font-size: 0.8rem;
+  }
+  .table-responsive td, .table-responsive th {
+    padding: 8px 6px !important;
+  }
+
+  /* Full-width modals */
+  .modal-content, [style*="position: fixed"][style*="z-index: 9999"] > .card,
+  [style*="position: fixed"][style*="z-index: 9999"] > .glass-panel {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    margin: 8px;
+    padding: 16px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Sidebar */
+  .sidebar { width: 85vw; max-width: 300px; }
+  .mobile-menu-btn { display: block; }
+  .mobile-close-btn { display: block; }
+  .hide-mobile { display: none; }
+
+  /* Bottom nav */
+  .bottom-nav { display: flex; }
+
+  /* Grid all single column */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Nav items larger for touch */
+  .nav-link { padding: 14px 16px; }
+
+  /* Logo smaller */
+  .logo-text { font-size: 1.1rem; }
+
+  /* File Manager grid */
+  [style*="grid-template-columns: repeat(auto-fill"] {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 8px !important;
+  }
+}
+
+/* ── Ensure bottom nav space on all mobile views ── */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 60px;
+  }
+
+  .bottom-nav {
+    display: flex;
+  }
+
+  /* Better tap targets */
+  .btn, .nav-link, .context-menu-item {
+    min-height: 42px;
+  }
+
+  /* Prevent body scroll when modal open */
+  body:has([style*="position: fixed"][style*="z-index: 9999"]) {
+    overflow: hidden;
+  }
+}
+
+/* ── Tablet (768px-1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-cols-3 { grid-template-columns: repeat(2, 1fr); }
 }

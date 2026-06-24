@@ -15,7 +15,8 @@ import {
   Folder,
   Film,
   Tag,
-  LogOut
+  LogOut,
+  Home
 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import api from './api';
@@ -185,7 +186,36 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Bottom Navigation (Mobile) */}
+      <BottomNav />
+
     </Router>
+  );
+}
+
+function BottomNav() {
+  const location = useLocation();
+  const items = [
+    { path: '/', label: 'Home', icon: <Home size={20} /> },
+    { path: '/explorer', label: 'Files', icon: <Folder size={20} /> },
+    { path: '/videos', label: 'Videos', icon: <Video size={20} /> },
+    { path: '/settings', label: 'Settings', icon: <Settings size={20} /> },
+  ];
+
+  return (
+    <nav className="bottom-nav">
+      {items.map((item) => (
+        <Link
+          key={item.path}
+          to={item.path}
+          className={location.pathname === item.path ? 'active' : ''}
+        >
+          {item.icon}
+          <span>{item.label}</span>
+        </Link>
+      ))}
+    </nav>
   );
 }
 
