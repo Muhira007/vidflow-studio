@@ -4,9 +4,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
+
+# Load .env file into os.environ
+load_dotenv()
 
 # Config
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "vidflow-studio-secret-change-in-production")
