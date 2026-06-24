@@ -17,12 +17,13 @@ class ProductGroup(Base):
 
 class VideoStatus(str, enum.Enum):
     PENDING = "pending"
+    WAITING = "waiting"      # antri menunggu giliran diproses
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
     INVALID = "invalid"
-    UPLOADED = "uploaded"  # sudah diupload ke sosmed
+    UPLOADED = "uploaded"    # sudah diupload ke sosmed
 
 class Video(Base):
     __tablename__ = "videos"

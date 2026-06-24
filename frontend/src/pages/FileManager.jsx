@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2, Edit3, Image as ImageIcon, Play, X } from 'lucide-react';
+import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2, Edit3, Image as ImageIcon, Play, X, MessageSquare, Save } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -22,6 +22,11 @@ export default function FileManager() {
   const [newName, setNewName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+
+  // Comment Modal State
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentTarget, setCommentTarget] = useState(null);
+  const [commentText, setCommentText] = useState('');
 
   // Video Player State
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, targets }
@@ -156,11 +161,12 @@ export default function FileManager() {
         else if (deleteConfirm) setDeleteConfirm(null);
         else if (showRenameModal) setShowRenameModal(false);
         else if (showCreateModal) setShowCreateModal(false);
+        else if (showCommentModal) setShowCommentModal(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showPlayer, deleteConfirm, showRenameModal, showCreateModal]);
+  }, [showPlayer, deleteConfirm, showRenameModal, showCreateModal, showCommentModal]);
 
   const handleContextMenu = (e, type, target) => {
     e.preventDefault();
@@ -309,6 +315,29 @@ export default function FileManager() {
       if (detail) {
         errMsg = typeof detail === 'string' ? detail : JSON.stringify(detail);
       }
+      toast.error(errMsg);
+    }
+  };
+
+  const submitComment = async () => {
+    if (!commentTarget) return;
+    try {
+      await api.put(`/groups/${encodeURIComponent(commentTarget)}`, {
+        product_description: commentText.trim() || null
+      });
+      toast.success('Komentar berhasil disimpan');
+      setShowCommentModal(false);
+      // Update local state immediately
+      setItems(prev => prev.map(f =>
+        f.name === commentTarget
+          ? { ...f, product_description: commentText.trim() || null }
+          : f
+      ));
+      fetchItems();
+    } catch (error) {
+      let errMsg = 'Gagal menyimpan komentar';
+      const detail = error.response?.data?.detail;
+      if (detail) errMsg += ': ' + (typeof detail === 'string' ? detail : JSON.stringify(detail));
       toast.error(errMsg);
     }
   };
@@ -519,9 +548,30 @@ export default function FileManager() {
               </div>
               
               {item.isFolder && (
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  {items.find(f => f.name === item.name)?.files?.length || 0} files
-                </div>
+                <>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    {items.find(f => f.name === item.name)?.files?.length || 0} files
+                  </div>
+                  {item.product_description && (
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--accent-primary)',
+                      marginTop: '6px',
+                      padding: '4px 8px',
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      borderRadius: '6px',
+                      wordBreak: 'break-word',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      lineHeight: '1.3',
+                      textAlign: 'left'
+                    }}>
+                      {item.product_description}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );
@@ -568,6 +618,15 @@ export default function FileManager() {
                   </div>
                   <div className="context-menu-item" onClick={() => openRenameModal(contextMenu.target)}>
                     <Edit3 size={16} /> Rename Folder
+                  </div>
+                  <div className="context-menu-item" onClick={() => {
+                    const currentComment = items.find(f => f.name === contextMenu.target)?.product_description || '';
+                    setCommentTarget(contextMenu.target);
+                    setCommentText(currentComment);
+                    setShowCommentModal(true);
+                    setContextMenu({...contextMenu, visible: false});
+                  }}>
+                    <MessageSquare size={16} /> {items.find(f => f.name === contextMenu.target)?.product_description ? 'Edit Komentar' : 'Tambah Komentar'}
                   </div>
                 </>
               )}
@@ -647,17 +706,65 @@ export default function FileManager() {
           <div className="card glass-panel" style={{ width: '400px', animation: 'fadeIn 0.2s ease-out' }}>
             <h3>Rename Folder</h3>
             <div className="form-group" style={{ marginTop: '16px' }}>
-              <input 
-                type="text" 
-                className="form-control" 
-                value={newName} 
-                onChange={(e) => setNewName(e.target.value)} 
+              <input
+                type="text"
+                className="form-control"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
                 autoFocus
               />
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
               <button className="btn btn-secondary" onClick={() => setShowRenameModal(false)}>Batal</button>
               <button className="btn btn-primary" onClick={submitRename}>Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comment Modal */}
+      {showCommentModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card glass-panel" style={{ width: '420px', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <MessageSquare size={24} className="text-primary" />
+              <h3 style={{ margin: 0 }}>
+                {commentText ? 'Edit Komentar' : 'Tambah Komentar'}
+              </h3>
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <span style={{
+                fontFamily: 'monospace', fontSize: '0.8rem',
+                color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)',
+                padding: '2px 8px', borderRadius: '4px'
+              }}>
+                {commentTarget}
+              </span>
+            </div>
+            <div className="form-group">
+              <label className="form-label" style={{ color: 'var(--text-secondary)' }}>
+                Komentar
+              </label>
+              <textarea
+                className="form-control"
+                placeholder="Contoh: Produk skincare batch Maret 2025..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    submitComment();
+                  }
+                }}
+                style={{ minHeight: '100px', resize: 'vertical', fontSize: '0.9rem' }}
+                autoFocus
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowCommentModal(false)}>Batal</button>
+              <button className="btn btn-primary" onClick={submitComment}>
+                <Save size={16} /> Simpan
+              </button>
             </div>
           </div>
         </div>

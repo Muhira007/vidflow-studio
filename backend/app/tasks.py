@@ -11,6 +11,26 @@ from app.services.cover_gen import extract_representative_frame, generate_cover_
 from app.services.vad_service import detect_speech_segments
 from app.services.caption_rewriter import generate_social_caption, generate_cover_title
 
+
+def queue_next_waiting():
+    """Cari video WAITING tertua, ubah ke PENDING, lalu antrikan ke Celery."""
+    db = SessionLocal()
+    try:
+        next_video = db.query(Video).filter(
+            Video.status == VideoStatus.WAITING
+        ).order_by(Video.created_at.asc()).first()
+
+        if next_video:
+            # Cek ulang tidak ada yang PROCESSING (safety)
+            active = db.query(Video).filter(Video.status == VideoStatus.PROCESSING).first()
+            if not active:
+                next_video.status = VideoStatus.PENDING
+                db.commit()
+                process_video_pipeline.delay(next_video.id)
+    finally:
+        db.close()
+
+
 @celery_app.task(bind=True)
 def process_video_pipeline(self, video_id: str):
     """
@@ -23,11 +43,16 @@ def process_video_pipeline(self, video_id: str):
     """
     db = SessionLocal()
     video = db.query(Video).filter(Video.id == video_id).first()
-    
+
     if not video:
         db.close()
         return f"Video {video_id} not found"
-        
+
+    # Guard: hanya proses video yang PENDING (termasuk yang baru dikonversi dari WAITING)
+    if video.status not in (VideoStatus.PENDING, VideoStatus.WAITING):
+        db.close()
+        return f"Video {video_id} status '{video.status.value}' — skip (bukan PENDING/WAITING)"
+
     video.status = VideoStatus.PROCESSING
     video.celery_task_id = self.request.id  # Simpan task ID untuk cancel
     db.commit()
@@ -321,8 +346,12 @@ def process_video_pipeline(self, video_id: str):
         video.status = VideoStatus.COMPLETED
         video.completed_at = func.now()
         db.commit()
+
+        # Lanjutkan ke video WAITING berikutnya
+        db.close()
+        queue_next_waiting()
         return f"Video {video_id} processed successfully"
-        
+
     except Exception as e:
         if "DIBATALKAN" in str(e):
             video.status = VideoStatus.CANCELLED
@@ -336,6 +365,10 @@ def process_video_pipeline(self, video_id: str):
             log.status = "failed"
             log.message = str(e)
             db.commit()
+        db.close()
+        # Tetap lanjut ke video berikutnya meski gagal
+        queue_next_waiting()
         raise e
     finally:
-        db.close()
+        if db.is_active:
+            db.close()

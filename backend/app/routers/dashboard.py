@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Video, JobLog
@@ -9,7 +9,9 @@ router = APIRouter()
 @router.get("/stats")
 def get_dashboard_stats(db: Session = Depends(get_db)):
     total_videos = db.query(Video).count()
-    active_jobs = db.query(Video).filter(Video.status == 'PROCESSING').count()
+    active_jobs = db.query(Video).filter(
+        Video.status.in_(['PROCESSING', 'WAITING'])
+    ).count()
     
     today = date.today()
     
@@ -53,7 +55,8 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         formatted_time = created_at.strftime("%d %b %Y, %H:%M:%S")
 
         recent_jobs_data.append({
-            "id": log.video_id,
+            "id": log.id,
+            "video_id": log.video_id,
             "step": log.step.capitalize(),
             "status": log.status.capitalize(),
             "time": time_str,
@@ -90,3 +93,19 @@ def get_all_logs(db: Session = Depends(get_db)):
         })
         
     return {"logs": logs_data}
+
+@router.delete("/logs/{log_id}")
+def delete_log(log_id: int, db: Session = Depends(get_db)):
+    log = db.query(JobLog).filter(JobLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+    db.delete(log)
+    db.commit()
+    return {"message": f"Log #{log_id} deleted"}
+
+@router.delete("/logs")
+def clear_all_logs(db: Session = Depends(get_db)):
+    count = db.query(JobLog).count()
+    db.query(JobLog).delete()
+    db.commit()
+    return {"message": f"{count} logs deleted"}

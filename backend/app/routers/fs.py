@@ -14,17 +14,21 @@ TMP_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/tmp"
 OUTPUT_DIR = "/home/kangdemuh/aplikasi/video-editor/claude2/output"
 
 @router.get("/list")
-def list_directory():
+def list_directory(db: Session = Depends(get_db)):
     os.makedirs(BASE_DIR, exist_ok=True)
     items = []
     for item in os.listdir(BASE_DIR):
         item_path = os.path.join(BASE_DIR, item)
         if os.path.isdir(item_path):
             files = os.listdir(item_path)
+            # Look up product_description from ProductGroup
+            group = db.query(ProductGroup).filter(ProductGroup.id == item).first()
+            product_description = group.product_description if group else None
             items.append({
                 "name": item,
                 "type": "folder",
-                "files": files
+                "files": files,
+                "product_description": product_description
             })
     # Sort folders alphabetically
     items.sort(key=lambda x: x["name"])

@@ -68,9 +68,23 @@ def downscale_to_1080p(input_path: str, output_path: str, is_10bit: bool = False
 
     - 10-bit source → H.265 10-bit, CRF 10
     - 8-bit source  → H.264 8-bit, CRF 8
+    - Auto-deteksi orientasi: landscape → 1920x1080, portrait → 1080x1920
 
     Audio di-stream-copy (tidak di-reencode).
     """
+    # Deteksi orientasi video
+    probe = ffmpeg.probe(input_path)
+    video_stream = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+    w = int(video_stream.get('width', 1920))
+    h = int(video_stream.get('height', 1080))
+    is_vertical = h > w
+
+    # Pilih target scale berdasarkan orientasi
+    if is_vertical:
+        scale_filter = 'scale=1080:1920:force_original_aspect_ratio=decrease'
+    else:
+        scale_filter = 'scale=1920:1080:force_original_aspect_ratio=decrease'
+
     if is_10bit:
         # H.265 10-bit — pertahankan kualitas warna tinggi
         (
@@ -78,7 +92,7 @@ def downscale_to_1080p(input_path: str, output_path: str, is_10bit: bool = False
             .input(input_path)
             .output(
                 output_path,
-                vf='scale=1920:1080:force_original_aspect_ratio=decrease',
+                vf=scale_filter,
                 vcodec='libx265', crf=10, preset='medium',
                 pix_fmt='yuv420p10le',
                 acodec='copy',
@@ -92,7 +106,7 @@ def downscale_to_1080p(input_path: str, output_path: str, is_10bit: bool = False
             .input(input_path)
             .output(
                 output_path,
-                vf='scale=1920:1080:force_original_aspect_ratio=decrease',
+                vf=scale_filter,
                 vcodec='libx264', crf=8, preset='medium',
                 pix_fmt='yuv420p',
                 acodec='copy',
@@ -193,21 +207,25 @@ def render_final_video(input_video: str, output_video: str, resolution: str = "1
     # Deteksi apakah orientasi horizontal (landscape) atau vertical/square (portrait)
     is_vertical = height >= width
 
-    # Tentukan skala maksimum berdasarkan parameter resolution
+    # Tentukan dimensi pendek (short side) berdasarkan parameter resolution
+    # Landscape 1080p → short side = 1080 (height)
+    # Portrait 1080p  → short side = 1080 (width)
     if resolution.upper() == "720P":
-        target_max = 1280 if not is_vertical else 720
-    else: # default 1080p
-        target_max = 1920 if not is_vertical else 1080
+        target_short = 720
+        target_long = 1280
+    else:  # default 1080p
+        target_short = 1080
+        target_long = 1920
 
-    # Gunakan filter scale ffmpeg yang otomatis mempertahankan rasio aspek
-    # Nilai -2 memastikan dimensi akhir bisa dibagi 2 (syarat wajib codec)
-    if not is_vertical:
-        scale_w = target_max
-        scale_h = -2
+    # scale_w = dimensi pendek (lebar untuk portrait, tinggi untuk landscape nanti auto dari aspect ratio)
+    # Untuk portrait:  scale=1080:-2  → 1080x1920
+    # Untuk landscape: scale=1920:-2  → 1920x1080
+    if is_vertical:
+        scale_w = target_short   # lebar = sisi pendek
+        scale_h = -2             # tinggi otomatis (jadi 1920)
     else:
-        # Jika video vertikal (seperti TikTok/Reels), target_max (misal 1080) menjadi tingginya atau lebarnya
-        scale_w = -2
-        scale_h = target_max
+        scale_w = target_long    # lebar = sisi panjang
+        scale_h = -2             # tinggi otomatis (jadi 1080)
 
     # Map format ke codec + container
     format_map = {

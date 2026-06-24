@@ -154,21 +154,20 @@ fi
 
 # ---- Celery Worker ----
 echo -n "  ⏳ Celery Worker... "
-OLD_PID=$(cat "$LOGS_DIR/celery.pid" 2>/dev/null || true)
-if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-    echo -e "${GREEN}sudah jalan ✓${NC} (PID $OLD_PID)"
+# Kill ALL existing celery workers to prevent duplicates
+pkill -f "celery.*worker" 2>/dev/null || true
+sleep 1
+cleanup_stale_pid "$LOGS_DIR/celery.pid"
+cd "$PROJECT_DIR/backend"
+daemonize "$LOGS_DIR/celery.log" "$LOGS_DIR/celery.pid" \
+    venv/bin/celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1 --prefetch-multiplier=1
+NEW_PID=$(cat "$LOGS_DIR/celery.pid")
+if wait_until_ready "$NEW_PID" 5; then
+    echo -e "${GREEN}berhasil start ✓${NC} (PID $NEW_PID)"
 else
-    cd "$PROJECT_DIR/backend"
-    daemonize "$LOGS_DIR/celery.log" "$LOGS_DIR/celery.pid" \
-        venv/bin/celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1 --prefetch-multiplier=1
-    NEW_PID=$(cat "$LOGS_DIR/celery.pid")
-    if wait_until_ready "$NEW_PID" 5; then
-        echo -e "${GREEN}berhasil start ✓${NC} (PID $NEW_PID)"
-    else
-        echo -e "${RED}GAGAL — cek logs/celery.log${NC}"
-    fi
-    cd "$PROJECT_DIR"
+    echo -e "${RED}GAGAL — cek logs/celery.log${NC}"
 fi
+cd "$PROJECT_DIR"
 
 # ---- Frontend (Vite) ----
 echo -n "  ⏳ Frontend (port $FRONTEND_PORT)... "

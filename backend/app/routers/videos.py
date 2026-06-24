@@ -95,12 +95,22 @@ def process_video(folder: str, name: str, db: Session = Depends(get_db)):
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    # Trigger celery task
+    # Cek apakah ada video yang sedang diproses
+    active_job = db.query(Video).filter(Video.status == VideoStatus.PROCESSING).first()
+    if active_job:
+        # Ada yang sedang diproses → antrikan sebagai WAITING
+        video.status = VideoStatus.WAITING
+        db.commit()
+        return {
+            "message": f"Video {video_id} masuk antrian. Menunggu '{active_job.id}' selesai.",
+            "status": "waiting"
+        }
+
+    # Tidak ada yang PROCESSING → langsung eksekusi
     task = process_video_pipeline.delay(video_id)
-    # Simpan task ID untuk keperluan cancel
     video.celery_task_id = task.id
     db.commit()
-    return {"message": f"Processing started for video {video_id}", "task_id": task.id}
+    return {"message": f"Processing started for video {video_id}", "task_id": task.id, "status": "processing"}
 
 
 @router.post("/{video_id:path}/cancel")
@@ -125,6 +135,26 @@ def cancel_processing(video_id: str, db: Session = Depends(get_db)):
         celery_app.control.revoke(task_id, terminate=True)
 
     return {"message": f"Processing untuk {video_id} telah dibatalkan", "task_id": task_id}
+
+
+@router.post("/{video_id:path}/restore")
+def restore_video(video_id: str, db: Session = Depends(get_db)):
+    """Kembalikan video CANCELLED/WAITING ke PENDING agar bisa diproses ulang."""
+    video = db.query(Video).filter(Video.id == video_id).first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if video.status not in (VideoStatus.CANCELLED, VideoStatus.WAITING):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Video status '{video.status.value}' tidak bisa di-restore. Hanya CANCELLED & WAITING."
+        )
+
+    video.status = VideoStatus.PENDING
+    video.celery_task_id = None
+    db.commit()
+    return {"message": f"Video {video_id} dikembalikan ke PENDING"}
+
 
 @router.post("/sync")
 def sync_videos(db: Session = Depends(get_db)):

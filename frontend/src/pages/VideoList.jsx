@@ -76,6 +76,16 @@ export default function VideoList() {
     }
   };
 
+  const handleRestore = async (videoId) => {
+    try {
+      await api.post(`/videos/${videoId}/restore`);
+      toast.success('Video dikembalikan ke PENDING');
+      fetchVideos();
+    } catch (error) {
+      toast.error('Gagal restore: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const openDetail = async (videoId) => {
     setDetailVideo({ id: videoId, data: null, loading: true });
     try {
@@ -94,25 +104,39 @@ export default function VideoList() {
     setSelectedIds(new Set());
 
     let success = 0;
+    let waiting = 0;
     let failed = 0;
-    const loadingToast = toast.loading(`Memproses ${ids.length} video... (0/${ids.length})`);
+    const loadingToast = toast.loading(`Mengantre ${ids.length} video... (0/${ids.length})`);
 
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i];
       try {
-        await api.post(`/videos/${id}/process`);
-        success++;
+        const res = await api.post(`/videos/${id}/process`);
+        if (res.data?.status === 'waiting') {
+          waiting++;
+        } else {
+          success++;
+        }
       } catch (err) {
         failed++;
         console.error(`Gagal memproses ${id}:`, err);
       }
-      toast.loading(`Memproses ${ids.length} video... (${i + 1}/${ids.length})`, { id: loadingToast });
+      toast.loading(`Mengantre ${ids.length} video... (${i + 1}/${ids.length})`, { id: loadingToast });
+
+      // Jeda 800ms antar request
+      if (i < ids.length - 1) {
+        await new Promise(r => setTimeout(r, 800));
+      }
     }
 
+    const totalQueued = success + waiting;
     if (failed === 0) {
-      toast.success(`${success} video masuk antrian render!`, { id: loadingToast });
+      const msg = waiting > 0
+        ? `${success} diproses, ${waiting} masuk antrian (WAITING)`
+        : `${totalQueued} video masuk antrian render!`;
+      toast.success(msg, { id: loadingToast });
     } else {
-      toast.error(`${success} berhasil, ${failed} gagal`, { id: loadingToast });
+      toast.error(`${totalQueued} berhasil, ${failed} gagal`, { id: loadingToast });
     }
     setProcessingSelected(false);
     fetchVideos();
@@ -327,6 +351,8 @@ export default function VideoList() {
                 if (status === 'FAILED') badgeType = 'danger';
                 if (status === 'CANCELLED') badgeType = 'warning';
                 if (status === 'PENDING') badgeType = 'secondary';
+                if (status === 'WAITING') badgeType = 'info';
+                if (status === 'PROCESSING') badgeType = 'warning';
 
                 const isProcessable = status === 'PENDING' || status === 'FAILED';
                 const isSelected = selectedIds.has(vid.id);
@@ -368,6 +394,11 @@ export default function VideoList() {
                             title="Batalkan proses"
                           >
                             <StopCircle size={16} />
+                          </button>
+                        )}
+                        {(status === 'WAITING' || status === 'CANCELLED') && (
+                          <button onClick={() => handleRestore(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px', color: 'var(--success)' }} title="Kembalikan ke PENDING">
+                            <RotateCcw size={16} />
                           </button>
                         )}
                         {status === 'FAILED' && (
