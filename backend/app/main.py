@@ -1,5 +1,8 @@
-from fastapi import FastAPI, Depends
+import os
+
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from starlette.types import ASGIApp, Scope, Receive, Send
 from sqlalchemy import text
 
@@ -85,6 +88,36 @@ def health_check():
         result["status"] = "degraded"
 
     return result
+
+
+# ─── Public stream endpoint (no auth — dipakai <video> tag) ───
+from fastapi.responses import FileResponse  # noqa: E402
+from app.paths import SOURCE_DIR, TMP_DIR, OUTPUT_DIR  # noqa: E402
+
+
+@app.get("/api/fs/stream/{folder}/{filename}")
+def public_stream(folder: str, filename: str):
+    """Stream video file — PUBLIC (no auth) karena dipakai <video> tag."""
+    if ".." in folder or ".." in filename or "/" in folder:
+        raise HTTPException(status_code=400, detail="Invalid path")  # noqa: F821
+
+    search_dirs = [
+        os.path.join(SOURCE_DIR, folder, filename),
+        os.path.join(TMP_DIR, folder, filename),
+        os.path.join(OUTPUT_DIR, folder, filename),
+    ]
+
+    for candidate in search_dirs:
+        if os.path.isfile(candidate):
+            ext = candidate.rsplit(".", 1)[-1].lower() if "." in candidate else "mp4"
+            media_types = {
+                "mp4": "video/mp4", "webm": "video/webm", "mov": "video/quicktime",
+                "mkv": "video/x-matroska", "avi": "video/x-msvideo",
+                "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+            }
+            return FileResponse(candidate, media_type=media_types.get(ext, "video/mp4"))
+
+    raise HTTPException(status_code=404, detail="File not found")  # noqa: F821
 
 
 # ─── Auth router (public — login endpoint) ───
