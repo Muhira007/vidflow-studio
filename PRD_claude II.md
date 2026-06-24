@@ -7,9 +7,9 @@
 | Nama Produk | **Vidflow Studio** — Automated affiliate video editing with AI-powered pipeline |
 | Versi Dokumen | 1.0 |
 | Tanggal | 20 Juni 2026 |
-| Status | Draft — siap dipakai sebagai acuan development |
+| Status | **Production** — Fase 1-6 complete, live di `app.muhirastore.com` |
 | Author | **Dede Muhira (kang demuh)** |
-| Tipe Deploy | Local (MVP) → Server Online (fase lanjutan) |
+| Tipe Deploy | ✅ Local (MVP) → ✅ Server Online (Production) |
 
 ---
 
@@ -531,9 +531,9 @@ erDiagram
 
 ## 19. Keamanan & Pengelolaan Akses
 
-- Autentikasi admin dashboard (minimal username/password + session/JWT)
-- API key layanan eksternal (STT/LLM) disimpan di environment variable, tidak hardcoded di kode
-- Saat migrasi ke server online: wajib HTTPS, rate limiting di endpoint admin, backup database berkala
+- ✅ Autentikasi admin dashboard (JWT: username/password + token 24 jam + logout)
+- ✅ API key layanan eksternal (STT/LLM) disimpan di environment variable, tidak hardcoded di kode
+- ✅ Server online: HTTPS (Let's Encrypt), rate limiting (100 req/min), firewall UFW, backup database berkala
 
 ---
 

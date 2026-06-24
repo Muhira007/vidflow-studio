@@ -25,7 +25,7 @@ export default function JobLogs() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title">Log & Riwayat</h1>
           <p className="page-subtitle" style={{ marginBottom: 0 }}>Pantau detail eksekusi setiap proses dalam pipeline.</p>
@@ -53,7 +53,7 @@ export default function JobLogs() {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>

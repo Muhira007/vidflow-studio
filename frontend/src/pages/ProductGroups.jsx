@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Tag, RefreshCw, Save, Package, Search, Folder, Check, Loader2, Trash2 } from 'lucide-react';
+import { Tag, RefreshCw, Save, Package, Search, Folder, Check, Loader2, Trash2, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api';
 
@@ -9,10 +9,27 @@ export default function ProductGroups() {
   const [search, setSearch] = useState('');
   const [savingId, setSavingId] = useState(null);
   const [edited, setEdited] = useState({}); // { groupId: { product_name, product_description } }
+  const [idPopup, setIdPopup] = useState(null);
 
   useEffect(() => {
     fetchGroups();
+    const handleBgClick = () => setIdPopup(null);
+    window.addEventListener('click', handleBgClick);
+    return () => window.removeEventListener('click', handleBgClick);
   }, []);
+
+  const handleIdClick = (e, folderId) => {
+    e.stopPropagation();
+    if (!folderId) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left;
+    if (x < 10) x = 10;
+    setIdPopup({
+      x,
+      y: rect.top + 28,
+      folderId
+    });
+  };
 
   const fetchGroups = async () => {
     try {
@@ -168,113 +185,8 @@ export default function ProductGroups() {
       {/* Card Grid */}
       {!loading && groups.length > 0 && (
         <>
-          {filtered.length === 0 ? (
-            <div className="glass-panel" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-              Tidak ada grup yang cocok dengan "{search}"
-            </div>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-              gap: '1rem',
-            }}>
-              {filtered.map((group) => {
-                const cur = getEdited(group);
-                const dirty = isDirty(group);
-                const isSaving = savingId === group.id;
-                const hasName = (group.product_name || '').trim().length > 0;
-
-                return (
-                  <div key={group.id} className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {/* Header: Folder ID + Video Count + Saved Badge */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span className="badge badge-primary" style={{
-                        fontFamily: 'monospace',
-                        fontSize: '0.85rem',
-                        padding: '4px 10px',
-                      }}>
-                        <Folder size={13} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
-                        {group.id}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="badge badge-secondary" style={{ fontSize: '0.8rem' }}>
-                          {group.video_count || 0} video
-                        </span>
-                        <button
-                          onClick={() => handleDelete(group.id)}
-                          className="btn btn-secondary"
-                          style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                          title="Hapus grup"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                        {hasName && !dirty && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <Check size={12} /> tersimpan
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Product Name Input */}
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
-                        Nama Produk
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Contoh: Produk Tissue Murah"
-                        value={cur.product_name}
-                        onChange={(e) => setField(group.id, 'product_name', e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSave(group.id); }}
-                        style={{ fontSize: '0.9rem' }}
-                      />
-                    </div>
-
-                    {/* Description Input */}
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
-                        Deskripsi <span style={{ fontWeight: 400 }}>(opsional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Deskripsi singkat produk..."
-                        value={cur.product_description}
-                        onChange={(e) => setField(group.id, 'product_description', e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSave(group.id); }}
-                        style={{ fontSize: '0.9rem' }}
-                      />
-                    </div>
-
-                    {/* Save Button */}
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleSave(group.id)}
-                      disabled={isSaving || !dirty}
-                      style={{
-                        alignSelf: 'flex-end',
-                        padding: '8px 20px',
-                        fontWeight: 600,
-                        opacity: dirty ? 1 : 0.5,
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {isSaving ? (
-                        <><Loader2 size={15} className="spinner" /> Menyimpan...</>
-                      ) : (
-                        <><Save size={15} /> Simpan</>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Stats Footer */}
-          <div style={{ marginTop: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          {/* Stats Header */}
+          <div style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             <div className="glass-panel" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <Package size={20} style={{ color: 'var(--accent-primary)' }} />
               <div>
@@ -292,7 +204,173 @@ export default function ProductGroups() {
               </div>
             </div>
           </div>
+
+          {filtered.length === 0 ? (
+            <div className="glass-panel" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              Tidak ada grup yang cocok dengan "{search}"
+            </div>
+          ) : (
+            <div className="product-grid">
+              {filtered.map((group) => {
+                const cur = getEdited(group);
+                const dirty = isDirty(group);
+                const isSaving = savingId === group.id;
+                const hasName = (group.product_name || '').trim().length > 0;
+
+                return (
+                  <div key={group.id} className="glass-panel" style={{ 
+                    padding: '1.25rem', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '1.25rem',
+                    borderLeft: '4px solid var(--accent-primary)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Header Row */}
+                    <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '1rem', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0, flex: 1 }}>
+                        <div style={{ 
+                          background: 'rgba(139, 92, 246, 0.15)', 
+                          padding: '0.6rem', 
+                          borderRadius: '8px',
+                          color: 'var(--accent-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Folder size={20} />
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '4px' }}>
+                            <div 
+                              style={{ 
+                                fontWeight: 700, 
+                                fontFamily: 'monospace', 
+                                whiteSpace: 'nowrap',
+                                fontSize: '1.05rem',
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer'
+                              }}
+                              onClick={(e) => handleIdClick(e, group.id)}
+                              title="Lihat Full ID"
+                            >
+                              {group.id.length > 10 ? group.id.slice(0, 10) + '...' : group.id}
+                            </div>
+                            <button
+                              onClick={() => handleDelete(group.id)}
+                              className="btn btn-secondary hover-bg-light"
+                              style={{ 
+                                padding: '6px', 
+                                color: 'var(--danger)', 
+                                border: '1px solid rgba(239, 68, 68, 0.1)',
+                                background: 'rgba(239, 68, 68, 0.05)',
+                                flexShrink: 0
+                              }}
+                              title="Hapus grup"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span className="badge badge-secondary" style={{ padding: '2px 8px', fontSize: '0.7rem' }}>
+                              {group.video_count || 0} Video
+                            </span>
+                            {hasName ? (
+                              <span style={{color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '3px'}}>
+                                <Check size={12} /> Tersimpan
+                              </span>
+                            ) : (
+                              <span style={{color: 'var(--warning)'}}>
+                                Belum diatur
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Inputs Row */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end' }}>
+                      <div style={{ flex: '1 1 250px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px', display: 'block', fontWeight: 500 }}>
+                          Nama Produk
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Contoh: Sabun Mandi Wangi"
+                          value={cur.product_name}
+                          onChange={(e) => setField(group.id, 'product_name', e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSave(group.id); }}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      
+                      <div style={{ flex: '2 1 300px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px', display: 'block', fontWeight: 500 }}>
+                          Deskripsi <span style={{ fontWeight: 400, opacity: 0.6 }}>(opsional)</span>
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Deskripsi singkat produk..."
+                            value={cur.product_description}
+                            onChange={(e) => setField(group.id, 'product_description', e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSave(group.id); }}
+                            style={{ flex: 1 }}
+                          />
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => handleSave(group.id)}
+                            disabled={isSaving || !dirty}
+                            style={{
+                              padding: '0 20px',
+                              fontWeight: 600,
+                              opacity: dirty ? 1 : 0.5,
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {isSaving ? <Loader2 size={16} className="spinner" /> : <Save size={16} />}
+                            <span className="hide-mobile" style={{ marginLeft: '6px' }}>Simpan</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+
         </>
+      )}
+
+      {idPopup && (
+        <div style={{
+          position: 'fixed',
+          left: idPopup.x,
+          top: idPopup.y,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999,
+          color: 'var(--text-primary)',
+          fontSize: '0.85rem',
+          maxWidth: '85vw',
+          wordBreak: 'break-all'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Hash size={14} color="var(--accent-primary)" />
+            Full Folder ID
+          </div>
+          <div style={{ color: 'var(--text-secondary)' }}>{idPopup.folderId}</div>
+        </div>
       )}
     </div>
   );

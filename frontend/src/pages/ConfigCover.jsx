@@ -36,9 +36,13 @@ export default function ConfigCover() {
   const [coverTitleMaxWords, setCoverTitleMaxWords] = useState(7);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
     fetchSettings();
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const fetchSettings = async () => {
@@ -94,159 +98,136 @@ export default function ConfigCover() {
         </button>
       </div>
 
-      {/* ── Two-column layout ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.25rem', alignItems: 'start' }}>
-
-        {/* ── LEFT: Template Selection ── */}
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
-            <ImageIcon size={20} style={{ color: 'var(--accent-primary)' }} />
-            <h3 style={{ margin: 0 }}>Template Cover</h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              {allTemplates.length} template · klik untuk memilih
-            </span>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-            gap: '14px',
-          }}>
-            {allTemplates.map(tpl => {
-              const isActive = tpl.id === activeTemplate;
-              return (
-                <div
-                  key={tpl.id}
-                  onClick={() => setActiveTemplate(tpl.id)}
-                  className="hover-lift"
-                  style={{
-                    background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.03)',
-                    border: `2px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                    borderRadius: '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {/* Active checkmark */}
-                  {isActive && (
-                    <div style={{
-                      position: 'absolute', top: '8px', right: '8px', zIndex: 10,
-                      background: 'var(--accent-primary)', color: '#fff',
-                      width: '24px', height: '24px', borderRadius: '50%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.8rem', boxShadow: '0 2px 8px rgba(59,130,246,0.4)',
-                    }}>✓</div>
-                  )}
-
-                  {/* Preview image */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+          <ImageIcon size={20} style={{ color: 'var(--accent-primary)' }} />
+          <h3 style={{ margin: 0 }}>Pilihan Template Cover</h3>
+        </div>
+        <div className="grid-cols-4">
+          {allTemplates.map(tpl => {
+            const isActive = tpl.id === activeTemplate;
+            return (
+              <div
+                key={tpl.id}
+                onClick={() => setActiveTemplate(tpl.id)}
+                className="hover-lift"
+                style={{
+                  background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-secondary)',
+                  border: `2px solid ${isActive ? 'var(--accent-primary)' : 'transparent'}`,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'all 0.2s ease',
+                  overflow: 'hidden',
+                }}
+              >
+                {isActive && (
                   <div style={{
-                    aspectRatio: '9/16',
-                    background: 'var(--bg-primary)',
+                    position: 'absolute', top: '8px', right: '8px', zIndex: 10,
+                    background: 'var(--accent-primary)', color: '#fff',
+                    width: '24px', height: '24px', borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    overflow: 'hidden',
-                  }}>
-                    <img
-                      src={`/covers/${tpl.id}.png`}
-                      alt={tpl.name}
-                      loading="lazy"
-                      style={{
-                        width: '100%', height: '100%',
-                        objectFit: 'cover',
-                        opacity: isActive ? 1 : 0.6,
-                        transition: 'opacity 0.2s',
-                      }}
-                    />
-                  </div>
-
-                  {/* Label */}
-                  <div style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <div style={{
-                      fontSize: '0.65rem', fontWeight: 700,
-                      color: 'var(--accent-primary)', textTransform: 'uppercase',
-                      letterSpacing: '0.5px', marginBottom: '2px',
-                    }}>{tpl.category}</div>
-                    <div style={{
-                      fontWeight: 600, fontSize: '0.85rem',
-                      color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    }}>{tpl.name}</div>
-                  </div>
+                    fontSize: '0.8rem', boxShadow: '0 2px 8px rgba(59,130,246,0.4)',
+                  }}>✓</div>
+                )}
+                <div style={{
+                  aspectRatio: '9/16',
+                  background: 'var(--bg-primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden',
+                }}>
+                  <img
+                    src={`/covers/${tpl.id}.png`}
+                    alt={tpl.name}
+                    loading="lazy"
+                    style={{
+                      width: '100%', height: '100%',
+                      objectFit: 'cover',
+                      opacity: isActive ? 1 : 0.6,
+                      transition: 'opacity 0.2s',
+                    }}
+                  />
                 </div>
-              );
-            })}
+                <div style={{ padding: '10px 12px', textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: '0.65rem', fontWeight: 700,
+                    color: 'var(--accent-primary)', textTransform: 'uppercase',
+                    letterSpacing: '0.5px', marginBottom: '2px',
+                  }}>{tpl.category}</div>
+                  <div style={{
+                    fontWeight: 600, fontSize: '0.85rem',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  }}>{tpl.name}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <h3 style={{ marginBottom: '20px' }}>Pengaturan Tambahan</h3>
+      <div className="card glass-panel grid-cols-2">
+        {/* Opacity Settings */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Type size={18} style={{ color: 'var(--accent-primary)' }} />
+            <label className="form-label" style={{ margin: 0 }}>Opacity Background</label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={bgOpacity}
+              onChange={(e) => setBgOpacity(e.target.value)}
+              style={{ flex: 1, accentColor: 'var(--accent-primary)' }}
+            />
+            <span style={{
+              background: 'var(--bg-primary)', padding: '6px 14px',
+              borderRadius: '20px', fontWeight: 700, fontSize: '0.9rem',
+              minWidth: '55px', textAlign: 'center',
+            }}>{bgOpacity}%</span>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+            Transparansi box di belakang teks judul cover. 0 = transparan penuh.
           </div>
         </div>
 
-        {/* ── RIGHT: Settings ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-          {/* Opacity Slider */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
-              <Type size={20} style={{ color: 'var(--accent-primary)' }} />
-              <h3 style={{ margin: 0 }}>Opacity Background</h3>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={bgOpacity}
-                onChange={(e) => setBgOpacity(e.target.value)}
-                style={{ flex: 1, accentColor: 'var(--accent-primary)' }}
-              />
-              <span style={{
-                background: 'var(--bg-primary)', padding: '6px 14px',
-                borderRadius: '20px', fontWeight: 700, fontSize: '0.9rem',
-                minWidth: '55px', textAlign: 'center',
-              }}>{bgOpacity}%</span>
-            </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-              Transparansi box di belakang teks judul cover. 0 = transparan penuh.
+        {/* AI Title Settings */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Zap size={18} style={{ color: '#f59e0b' }} />
+            <label className="form-label" style={{ margin: 0 }}>AI Judul (DeepSeek)</label>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <select
+              className="form-control"
+              value={coverTitleStyle}
+              onChange={e => setCoverTitleStyle(e.target.value)}
+            >
+              {titleStyles.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Gaya penulisan judul cover oleh AI
             </div>
           </div>
-
-          {/* AI Title Settings */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
-              <Zap size={20} style={{ color: '#f59e0b' }} />
-              <h3 style={{ margin: 0 }}>AI Judul (DeepSeek)</h3>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>Gaya Bahasa</label>
-              <select
-                className="form-control"
-                value={coverTitleStyle}
-                onChange={e => setCoverTitleStyle(e.target.value)}
-              >
-                {titleStyles.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Gaya penulisan judul cover oleh AI
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                Maksimum Kata: <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{coverTitleMaxWords}</span>
-              </label>
-              <input
-                type="range"
-                min="3"
-                max="12"
-                value={coverTitleMaxWords}
-                onChange={(e) => setCoverTitleMaxWords(e.target.value)}
-                style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                <span>3 kata</span>
-                <span>12 kata</span>
-              </div>
+          <div>
+            <label className="form-label" style={{ fontSize: '0.85rem' }}>
+              Maksimum Kata: <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{coverTitleMaxWords}</span>
+            </label>
+            <input
+              type="range"
+              min="3"
+              max="12"
+              value={coverTitleMaxWords}
+              onChange={(e) => setCoverTitleMaxWords(e.target.value)}
+              style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              <span>3</span>
+              <span>12</span>
             </div>
           </div>
         </div>

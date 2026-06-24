@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Filter, Play, RotateCcw, MoreHorizontal, Trash2, FolderSync, AlertTriangle, CheckSquare, Square, Zap, StopCircle } from 'lucide-react';
+import { Filter, Play, RotateCcw, MoreHorizontal, Trash2, FolderSync, AlertTriangle, CheckSquare, Square, Zap, StopCircle, Settings, FileText, Hash, Clock } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,59 @@ export default function VideoList() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [processingSelected, setProcessingSelected] = useState(false);
   const [detailVideo, setDetailVideo] = useState(null); // { id, data, loading }
+  const [actionMenu, setActionMenu] = useState(null);
+  const [idPopup, setIdPopup] = useState(null);
+  const [timePopup, setTimePopup] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleBgClick = () => {
+      setActionMenu(null);
+      setIdPopup(null);
+      setTimePopup(null);
+    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    
+    window.addEventListener('click', handleBgClick);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('click', handleBgClick);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  const handleTimeClick = (e, createdAt) => {
+    e.stopPropagation();
+    if (!createdAt) return;
+    const dateObj = new Date(createdAt);
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left - 80;
+    if (x < 10) x = 10;
+    setTimePopup({
+      x,
+      y: rect.top + 32,
+      datetime: dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+      time: dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    });
+    setActionMenu(null);
+    setIdPopup(null);
+  };
+
+  const handleIdClick = (e, videoId) => {
+    e.stopPropagation();
+    if (!videoId) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left;
+    if (x < 10) x = 10;
+    setIdPopup({
+      x,
+      y: rect.top + 32,
+      videoId
+    });
+    setActionMenu(null);
+    setTimePopup(null);
+  };
 
   const fetchVideos = async () => {
     try {
@@ -379,44 +432,80 @@ export default function VideoList() {
                         <Square size={18} style={{ opacity: 0.25, cursor: 'not-allowed' }} />
                       )}
                     </td>
-                    <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>{vid.id}</td>
-                    <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{new Date(vid.created_at).toLocaleDateString()}</td>
+                    <td 
+                      style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)', cursor: isMobile ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
+                      title={isMobile ? "Klik untuk lihat full ID" : ""}
+                      onClick={(e) => { if (isMobile) handleIdClick(e, vid.id); }}
+                    >
+                      {isMobile ? (vid.id ? (vid.id.length > 5 ? '...' + vid.id.slice(-5) : vid.id) : '-') : (vid.id || '-')}
+                    </td>
+                    <td style={{ padding: '16px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      {isMobile ? (
+                        <button 
+                          className="btn btn-secondary" 
+                          style={{ padding: '6px', background: 'transparent', border: '1px solid var(--border-light)' }}
+                          onClick={(e) => handleTimeClick(e, vid.created_at)}
+                          title="Lihat Waktu"
+                        >
+                          <Clock size={16} />
+                        </button>
+                      ) : (
+                        vid.created_at ? new Date(vid.created_at).toLocaleString('id-ID') : '-'
+                      )}
+                    </td>
                     <td style={{ padding: '16px 12px' }}>
                       <span className={`badge badge-${badgeType}`}>{status}</span>
                     </td>
                     <td style={{ padding: '16px 12px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        {status === 'PROCESSING' && (
+                        {isMobile ? (
                           <button
-                            onClick={() => handleCancel(vid.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setActionMenu({
+                                id: vid.id,
+                                status: status,
+                                x: rect.right,
+                                y: rect.bottom
+                              });
+                            }}
                             className="btn btn-secondary"
-                            style={{ padding: '6px 10px', background: 'var(--warning)', color: '#000', border: 'none' }}
-                            title="Batalkan proses"
+                            style={{ padding: '6px 10px' }}
+                            title="Aksi"
                           >
-                            <StopCircle size={16} />
+                            <Settings size={16} />
                           </button>
+                        ) : (
+                          <>
+                            {status === 'PROCESSING' && (
+                              <button className="btn btn-secondary" style={{ padding: '6px 10px', color: 'var(--warning)' }} onClick={() => handleCancel(vid.id)} title="Batalkan">
+                                <StopCircle size={16} />
+                              </button>
+                            )}
+                            {(status === 'WAITING' || status === 'CANCELLED') && (
+                              <button className="btn btn-secondary" style={{ padding: '6px 10px', color: 'var(--success)' }} onClick={() => handleRestore(vid.id)} title="Ke Pending">
+                                <RotateCcw size={16} />
+                              </button>
+                            )}
+                            {status === 'FAILED' && (
+                              <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => handleProcess(vid.id)} title="Coba Lagi">
+                                <RotateCcw size={16} />
+                              </button>
+                            )}
+                            {(status === 'PENDING' || status === 'FAILED') && (
+                              <button className="btn btn-secondary" style={{ padding: '6px 10px', color: 'var(--accent-primary)' }} onClick={() => handleProcess(vid.id)} title="Proses Video">
+                                <Play size={16} />
+                              </button>
+                            )}
+                            <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => openDetail(vid.id)} title="Detail">
+                              <FileText size={16} />
+                            </button>
+                            <button className="btn btn-secondary" style={{ padding: '6px 10px', color: 'var(--danger)' }} onClick={() => setVideoToDelete(vid.id)} title="Hapus">
+                              <Trash2 size={16} />
+                            </button>
+                          </>
                         )}
-                        {(status === 'WAITING' || status === 'CANCELLED') && (
-                          <button onClick={() => handleRestore(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px', color: 'var(--success)' }} title="Kembalikan ke PENDING">
-                            <RotateCcw size={16} />
-                          </button>
-                        )}
-                        {status === 'FAILED' && (
-                          <button onClick={() => handleProcess(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Retry">
-                            <RotateCcw size={16} />
-                          </button>
-                        )}
-                        {(status === 'PENDING' || status === 'FAILED') && (
-                          <button onClick={() => handleProcess(vid.id)} className="btn btn-primary" style={{ padding: '6px 10px' }} title="Proses">
-                            <Play size={16} />
-                          </button>
-                        )}
-                        <button onClick={() => openDetail(vid.id)} className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Detail">
-                          <MoreHorizontal size={16} />
-                        </button>
-                        <button onClick={() => setVideoToDelete(vid.id)} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus">
-                          <Trash2 size={16} />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -426,6 +515,101 @@ export default function VideoList() {
           </table>
         </div>
       </div>
+
+      {actionMenu && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: actionMenu.y + 4,
+            left: actionMenu.x - 180,
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+            zIndex: 9999,
+            minWidth: '180px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {actionMenu.status === 'PROCESSING' && (
+            <div className="hover-bg-light" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--warning)', borderBottom: '1px solid var(--border-light)' }} onClick={() => { handleCancel(actionMenu.id); setActionMenu(null); }}>
+              <StopCircle size={16} /> Batalkan Proses
+            </div>
+          )}
+          {(actionMenu.status === 'WAITING' || actionMenu.status === 'CANCELLED') && (
+            <div className="hover-bg-light" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--success)', borderBottom: '1px solid var(--border-light)' }} onClick={() => { handleRestore(actionMenu.id); setActionMenu(null); }}>
+              <RotateCcw size={16} /> Ke Pending
+            </div>
+          )}
+          {actionMenu.status === 'FAILED' && (
+            <div className="hover-bg-light" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-light)' }} onClick={() => { handleProcess(actionMenu.id); setActionMenu(null); }}>
+              <RotateCcw size={16} /> Coba Lagi
+            </div>
+          )}
+          {(actionMenu.status === 'PENDING' || actionMenu.status === 'FAILED') && (
+            <div className="hover-bg-light" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--accent-primary)', borderBottom: '1px solid var(--border-light)' }} onClick={() => { handleProcess(actionMenu.id); setActionMenu(null); }}>
+              <Play size={16} /> Proses Video
+            </div>
+          )}
+          <div className="hover-bg-light" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-light)' }} onClick={() => { openDetail(actionMenu.id); setActionMenu(null); }}>
+            <FileText size={16} /> Detail Video
+          </div>
+          <div className="hover-bg-light" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--danger)' }} onClick={() => { setVideoToDelete(actionMenu.id); setActionMenu(null); }}>
+            <Trash2 size={16} /> Hapus Video
+          </div>
+        </div>
+      )}
+
+      {idPopup && (
+        <div style={{
+          position: 'fixed',
+          left: idPopup.x,
+          top: idPopup.y,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999,
+          color: 'var(--text-primary)',
+          fontSize: '0.85rem',
+          maxWidth: '85vw',
+          wordBreak: 'break-all'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Hash size={14} color="var(--accent-primary)" />
+            Full Video ID
+          </div>
+          <div style={{ color: 'var(--text-secondary)' }}>{idPopup.videoId}</div>
+        </div>
+      )}
+
+      {timePopup && (
+        <div style={{
+          position: 'fixed',
+          left: timePopup.x,
+          top: timePopup.y,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999,
+          color: 'var(--text-primary)',
+          fontSize: '0.85rem',
+          minWidth: '150px'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} color="var(--accent-primary)" />
+            Waktu Dibuat
+          </div>
+          <div style={{ color: 'var(--text-secondary)' }}>{timePopup.datetime}</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>{timePopup.time}</div>
+        </div>
+      )}
     </div>
   );
 }

@@ -41,78 +41,84 @@ export default function ConfigRender() {
 
   return (
     <div style={{ maxWidth: '800px' }}>
-      <h1 className="page-title">Render Settings</h1>
-      <p className="page-subtitle">Atur resolusi, format, dan kualitas export untuk video final.</p>
+      <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 className="page-title">Render Settings</h1>
+          <p className="page-subtitle" style={{ marginBottom: 0 }}>Atur resolusi, format, dan kualitas export untuk video final.</p>
+        </div>
+        <button onClick={handleSave} className="btn btn-primary" style={{ padding: '10px 22px', fontWeight: 600 }}>
+          <Save size={16} /> Simpan Konfigurasi
+        </button>
+      </div>
 
-      <div className="card glass-panel grid-cols-2">
-        <div className="form-group">
-          <label className="form-label">Resolusi Output</label>
-          <select
-            className="form-control"
-            value={resolution}
-            onChange={(e) => setResolution(e.target.value)}
-          >
-            <option value="720p">HD (720p)</option>
-            <option value="1080p">FHD (1080p)</option>
-          </select>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-            1080p direkomendasikan untuk keseimbangan kualitas & kecepatan
+      <div className="card glass-panel" style={{ marginBottom: '24px' }}>
+        <h3 style={{ marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)' }}>
+          Pengaturan Dasar
+        </h3>
+        <div className="grid-cols-2">
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Resolusi Output</label>
+            <select
+              className="form-control"
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value)}
+            >
+              <option value="720p">HD (720p)</option>
+              <option value="1080p">FHD (1080p)</option>
+            </select>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+              1080p direkomendasikan untuk keseimbangan kualitas & kecepatan
+            </div>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Format Output</label>
+            <select
+              className="form-control"
+              value={outputFormat}
+              onChange={(e) => setOutputFormat(e.target.value)}
+            >
+              <option>MP4 (H.264)</option>
+              <option>MP4 (H.265 / HEVC)</option>
+              <option>WebM</option>
+            </select>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+              H.265 menghasilkan file lebih kecil namun proses lebih lama
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="form-group">
-          <label className="form-label">Format Output</label>
-          <select
-            className="form-control"
-            value={outputFormat}
-            onChange={(e) => setOutputFormat(e.target.value)}
-          >
-            <option>MP4 (H.264)</option>
-            <option>MP4 (H.265 / HEVC)</option>
-            <option>WebM</option>
-          </select>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-            H.265 menghasilkan file lebih kecil namun proses lebih lama
+      <div className="card glass-panel">
+        <h3 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)' }}>
+          <AlertTriangle size={18} className="text-warning" /> Advanced Settings
+        </h3>
+        
+        <div className="grid-cols-3">
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Video Bitrate (Mbps)</label>
+            <input type="number" className="form-control" defaultValue="8" />
           </div>
-        </div>
 
-        <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
-          <h4 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertTriangle size={18} className="text-warning" /> Advanced Settings
-          </h4>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Audio Bitrate (kbps)</label>
+            <select className="form-control" defaultValue="192">
+              <option>128</option>
+              <option>192</option>
+              <option>256</option>
+              <option>320</option>
+            </select>
+          </div>
           
-          <div className="grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Video Bitrate (Mbps)</label>
-              <input type="number" className="form-control" defaultValue="8" />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Audio Bitrate (kbps)</label>
-              <select className="form-control" defaultValue="192">
-                <option>128</option>
-                <option>192</option>
-                <option>256</option>
-                <option>320</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Hardware Acceleration</label>
-              <select className="form-control" defaultValue="Auto">
-                <option>Auto (Recommended)</option>
-                <option>NVENC (NVIDIA)</option>
-                <option>QSV (Intel)</option>
-                <option>Software Only</option>
-              </select>
-            </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Hardware Acceleration</label>
+            <select className="form-control" defaultValue="Auto">
+              <option>Auto (Recommended)</option>
+              <option>NVENC (NVIDIA)</option>
+              <option>QSV (Intel)</option>
+              <option>Software Only</option>
+            </select>
           </div>
-        </div>
-
-        <div style={{ gridColumn: 'span 2', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-light)', paddingTop: '24px' }}>
-          <button onClick={handleSave} className="btn btn-primary">
-            <Save size={18} /> Simpan Konfigurasi
-          </button>
         </div>
       </div>
     </div>

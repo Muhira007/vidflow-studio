@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PlaySquare, Activity, AlertCircle, CheckCircle2, Trash2, RefreshCw } from 'lucide-react';
+import { PlaySquare, Activity, AlertCircle, CheckCircle2, Trash2, RefreshCw, Clock, Hash } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -7,6 +7,53 @@ export default function DashboardOverview() {
   const [stats, setStats] = useState([]);
   const [recentJobs, setRecentJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [timePopup, setTimePopup] = useState(null);
+  const [idPopup, setIdPopup] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleBgClick = () => {
+      setTimePopup(null);
+      setIdPopup(null);
+    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    
+    window.addEventListener('click', handleBgClick);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('click', handleBgClick);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  const handleTimeClick = (e, job) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left - 80;
+    if (x < 10) x = 10;
+    setTimePopup({
+      x,
+      y: rect.top + 32,
+      datetime: job.datetime || job.time,
+      time: job.datetime ? job.time : null,
+    });
+    setIdPopup(null);
+  };
+
+  const handleIdClick = (e, videoId) => {
+    e.stopPropagation();
+    if (!videoId) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left;
+    if (x < 10) x = 10;
+    setIdPopup({
+      x,
+      y: rect.top + 32,
+      videoId
+    });
+    setTimePopup(null);
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -104,15 +151,15 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '12px', fontWeight: 500 }}>Video ID</th>
-                <th style={{ padding: '12px', fontWeight: 500 }}>Step</th>
-                <th style={{ padding: '12px', fontWeight: 500 }}>Status</th>
-                <th style={{ padding: '12px', fontWeight: 500 }}>Waktu</th>
-                <th style={{ padding: '12px', fontWeight: 500 }}>Aksi</th>
+                <th style={{ padding: '12px', fontWeight: 500, whiteSpace: 'nowrap' }}>Video ID</th>
+                <th style={{ padding: '12px', fontWeight: 500, whiteSpace: 'nowrap' }}>Step</th>
+                <th style={{ padding: '12px', fontWeight: 500, whiteSpace: 'nowrap' }}>Status</th>
+                <th style={{ padding: '12px', fontWeight: 500, whiteSpace: 'nowrap' }}>Waktu</th>
+                <th style={{ padding: '12px', fontWeight: 500, whiteSpace: 'nowrap' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -122,25 +169,42 @@ export default function DashboardOverview() {
                 </tr>
               ) : recentJobs.map((job) => (
                 <tr key={job.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                  <td style={{ padding: '16px 12px', fontWeight: 600, wordBreak: 'break-all' }} title={job.video_id}>
-                    {job.video_id ? (job.video_id.length > 35 ? job.video_id.slice(-35) : job.video_id) : '-'}
+                  <td 
+                    style={{ padding: '16px 12px', fontWeight: 600, whiteSpace: 'nowrap', cursor: isMobile ? 'pointer' : 'default', color: 'var(--accent-primary)' }} 
+                    title={isMobile ? "Klik untuk lihat full ID" : ""}
+                    onClick={(e) => { if (isMobile) handleIdClick(e, job.video_id); }}
+                  >
+                    {isMobile ? (job.video_id ? (job.video_id.length > 5 ? '...' + job.video_id.slice(-5) : job.video_id) : '-') : (job.video_id || '-')}
                   </td>
-                  <td style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>{job.step}</td>
-                  <td style={{ padding: '16px 12px' }}>
+                  <td style={{ padding: '16px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{job.step}</td>
+                  <td style={{ padding: '16px 12px', whiteSpace: 'nowrap' }}>
                     <span className={`badge badge-${job.type}`}>{job.status}</span>
                   </td>
                   <td style={{ padding: '16px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{job.datetime || job.time}</div>
-                    {job.datetime && <div style={{ fontSize: '0.7rem', marginTop: '2px' }}>{job.time}</div>}
+                    {isMobile ? (
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid var(--border-light)' }}
+                        onClick={(e) => handleTimeClick(e, job)}
+                        title="Lihat Waktu"
+                      >
+                        <Clock size={16} />
+                      </button>
+                    ) : (
+                      <>
+                        <div style={{ color: 'var(--text-primary)' }}>{job.datetime || job.time}</div>
+                        {job.datetime && <div style={{ fontSize: '0.8rem' }}>{job.time}</div>}
+                      </>
+                    )}
                   </td>
-                  <td style={{ padding: '16px 12px' }}>
+                  <td style={{ padding: '16px 12px', whiteSpace: 'nowrap' }}>
                     <button
                       className="btn btn-secondary"
-                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                      style={{ padding: '4px 8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
                       onClick={() => handleDeleteLog(job.id)}
                       title="Hapus log ini"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} /> {!isMobile && 'Hapus'}
                     </button>
                   </td>
                 </tr>
@@ -149,6 +213,54 @@ export default function DashboardOverview() {
           </table>
         </div>
       </div>
+
+      {timePopup && (
+        <div style={{
+          position: 'fixed',
+          left: timePopup.x,
+          top: timePopup.y,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999,
+          color: 'var(--text-primary)',
+          fontSize: '0.85rem',
+          minWidth: '150px'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} color="var(--accent-primary)" />
+            Waktu Proses
+          </div>
+          <div style={{ color: 'var(--text-secondary)' }}>{timePopup.datetime}</div>
+          {timePopup.time && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>{timePopup.time}</div>}
+        </div>
+      )}
+
+      {idPopup && (
+        <div style={{
+          position: 'fixed',
+          left: idPopup.x,
+          top: idPopup.y,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999,
+          color: 'var(--text-primary)',
+          fontSize: '0.85rem',
+          maxWidth: '85vw',
+          wordBreak: 'break-all'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Hash size={14} color="var(--accent-primary)" />
+            Full Video ID
+          </div>
+          <div style={{ color: 'var(--text-secondary)' }}>{idPopup.videoId}</div>
+        </div>
+      )}
     </div>
   );
 }

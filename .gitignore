@@ -4,6 +4,7 @@ __pycache__/
 *.mp4
 .env
 .env.production
+backend/app/global_settings.json
 *.pid
 logs/*.log
 source/

@@ -67,7 +67,7 @@ export default function ConfigSilenceCut() {
       <div className="card glass-panel">
         <div className="form-group" style={{ marginBottom: '32px' }}>
           <label className="form-label">Mode Pemotongan</label>
-          <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
+          <div className="grid-cols-4" style={{ marginTop: '12px' }}>
             {['Nonaktif', 'Level 1', 'Level 2', 'Level 3 (VAD/AI)'].map(opt => (
               <div
                 key={opt}
@@ -78,11 +78,9 @@ export default function ConfigSilenceCut() {
                   border: `2px solid ${level === opt ? 'var(--accent-primary)' : 'var(--border-color)'}`,
                   background: level === opt ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
                   cursor: 'pointer',
-                  flex: 1,
                   textAlign: 'center',
                   fontWeight: level === opt ? 600 : 400,
-                  transition: 'var(--transition-fast)',
-                  minWidth: '140px'
+                  transition: 'var(--transition-fast)'
                 }}
               >
                 {opt.replace(' (VAD/AI)', '')}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Download, Copy, Trash2, Check, X, AlertTriangle, Image as ImageIcon, Film, Filter, ChevronLeft, ChevronRight, Play, Loader2 } from 'lucide-react';
+import { Download, Copy, Trash2, Check, X, AlertTriangle, Image as ImageIcon, Film, Filter, ChevronLeft, ChevronRight, Play, Loader2, Settings, Clock, Hash } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -36,6 +36,60 @@ export default function OutputList() {
   const [playerVideoUrl, setPlayerVideoUrl] = useState('');
   const [playerVideoName, setPlayerVideoName] = useState('');
 
+  const [idPopup, setIdPopup] = useState(null);
+  const [timePopup, setTimePopup] = useState(null);
+  const [actionMenu, setActionMenu] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleBgClick = () => {
+      setIdPopup(null);
+      setTimePopup(null);
+      setActionMenu(null);
+    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    
+    window.addEventListener('click', handleBgClick);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('click', handleBgClick);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  const handleIdClick = (e, videoId) => {
+    e.stopPropagation();
+    if (!videoId) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left;
+    if (x < 10) x = 10;
+    setIdPopup({ x, y: rect.top + 28, videoId });
+    setTimePopup(null);
+    setActionMenu(null);
+  };
+
+  const handleTimeClick = (e, out) => {
+    e.stopPropagation();
+    if (!out.completed_at) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left - 150;
+    if (x < 10) x = 10;
+    setTimePopup({ x, y: rect.top + 28, data: out });
+    setIdPopup(null);
+    setActionMenu(null);
+  };
+
+  const handleActionClick = (e, out) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.left - 180;
+    if (x < 10) x = 10;
+    setActionMenu({ x, y: rect.top + 28, out });
+    setIdPopup(null);
+    setTimePopup(null);
+  };
+
   const fetchOutputs = async () => {
     try {
       const res = await api.get('/outputs/');
@@ -53,12 +107,34 @@ export default function OutputList() {
     return () => clearInterval(interval);
   }, []);
 
+  const copyToClipboard = async (text) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        throw new Error('Browser Anda tidak mendukung fitur salin otomatis.');
+      } finally {
+        textArea.remove();
+      }
+    }
+  };
+
   const handleCopyCaption = async (videoId) => {
     try {
       const res = await api.get(`/outputs/${videoId}/caption`);
       const text = res.data?.caption_text;
       if (text) {
-        await navigator.clipboard.writeText(text);
+        await copyToClipboard(text);
         toast.success('Transkrip berhasil disalin ke clipboard!');
       } else {
         toast.error('Tidak ada transkrip tersedia.');
@@ -79,7 +155,7 @@ export default function OutputList() {
       const text = res.data?.caption_social;
       toast.dismiss(loadingToast);
       if (text) {
-        await navigator.clipboard.writeText(text);
+        await copyToClipboard(text);
         toast.success('Caption AI berhasil disalin! Siap upload ke sosmed 🎉');
         // Refresh daftar untuk update status has_social_caption
         fetchOutputs();
@@ -239,16 +315,17 @@ export default function OutputList() {
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '16px 12px', fontWeight: 500, width: '80px' }}>Preview</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>ID Video</th>
-                <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center', whiteSpace: 'nowrap' }}>Selesai</th>
-                <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Caption</th>
-                <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Unduh</th>
-                <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Upload Sosmed</th>
-                <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Aksi</th>
+                <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center', whiteSpace: 'nowrap', width: isMobile ? '80px' : 'auto' }}>Selesai</th>
+                {!isMobile && <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Caption</th>}
+                {!isMobile && <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Unduh</th>}
+                {!isMobile && <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Upload Sosmed</th>}
+                {!isMobile && <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center' }}>Hapus</th>}
+                {isMobile && <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center', width: '80px' }}>Aksi</th>}
               </tr>
             </thead>
             <tbody>
               {paginatedOutputs.length === 0 ? (
-                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <tr><td colSpan={isMobile ? "4" : "8"} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   <Film size={48} style={{ opacity: 0.3, margin: '0 auto 16px', display: 'block' }} />
                   {outputs.length === 0 ? (
                     <>
@@ -265,158 +342,163 @@ export default function OutputList() {
                   <td style={{ padding: '10px 12px' }}>
                     <div
                       style={{
-                        position: 'relative',
-                        width: '64px', height: '36px',
+                        position: 'relative', width: '64px', height: '36px',
                         cursor: out.video_file ? 'pointer' : 'default',
                         borderRadius: '4px', overflow: 'hidden',
-                        background: 'var(--bg-tertiary)',
-                        display: 'inline-block'
+                        background: 'var(--bg-tertiary)', display: 'inline-block'
                       }}
                       onClick={() => out.video_file && openVideoPlayer(out.group || out.id, out.video_file.name)}
                       title={out.video_file ? 'Klik untuk preview video' : 'Tidak ada file video'}
                     >
                       {out.cover_file ? (
-                        <img
-                          src={`${basePath}/fs/stream/${encodeURIComponent(out.group || out.id)}/${encodeURIComponent(out.cover_file.name)}`}
-                          alt={out.id}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
+                        <img src={`${basePath}/fs/stream/${encodeURIComponent(out.group || out.id)}/${encodeURIComponent(out.cover_file.name)}`} alt={out.id} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <ImageIcon size={20} style={{ opacity: 0.3 }} />
-                        </div>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={20} style={{ opacity: 0.3 }} /></div>
                       )}
-                      {/* Play overlay */}
                       {out.video_file && (
-                        <div style={{
-                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                          background: 'rgba(0,0,0,0.4)', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center',
-                          opacity: 0.7, transition: 'opacity 0.2s',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
-                        >
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7, transition: 'opacity 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}>
                           <Play size={14} color="#fff" fill="#fff" />
                         </div>
                       )}
                     </div>
                   </td>
 
-                  {/* ID Video + Group */}
-                  <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)' }}>
-                    {out.id}
-                    {out.group && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 400, opacity: 0.7 }}>
-                        📁 {out.group}
-                      </div>
+                  {/* ID Video */}
+                  <td style={{ padding: '16px 12px', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap' }}>
+                    {isMobile ? (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ cursor: 'pointer', borderBottom: '1px dashed var(--accent-primary)' }} onClick={(e) => handleIdClick(e, out.id)}>
+                            {out.id.length > 5 ? '...' + out.id.slice(-5) : out.id}
+                          </span>
+                        </div>
+                        {out.group && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400, marginTop: '4px', cursor: 'pointer' }} onClick={(e) => handleIdClick(e, out.group)}>
+                            📁 {out.group.length > 5 ? '...' + out.group.slice(-5) : out.group}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {out.id}
+                        {out.group && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 400, opacity: 0.7 }}>
+                            📁 {out.group}
+                          </div>
+                        )}
+                      </>
                     )}
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '4px' }}>
                       {out.resolution} · {out.video_file ? formatSize(out.video_file.size_bytes) : '-'}
                     </div>
                   </td>
 
-                  {/* Selesai — tanggal & jam render */}
+                  {/* Selesai */}
                   <td style={{ padding: '16px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                     {out.completed_at ? (
-                      <div>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                          {new Date(out.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      isMobile ? (
+                        <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', color: 'var(--accent-primary)', transition: 'background 0.2s' }} onClick={(e) => handleTimeClick(e, out)} title="Klik untuk lihat waktu render">
+                          <Clock size={16} />
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          {new Date(out.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      ) : (
+                        <div>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                            {new Date(out.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            {new Date(out.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </div>
                         </div>
-                      </div>
+                      )
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>-</span>
                     )}
                   </td>
 
-                  {/* Caption - AI Social */}
-                  <td style={{ padding: '16px 12px', textAlign: 'center' }}>
-                    {out.has_caption ? (
-                      <button
-                        onClick={() => handleCopySocialCaption(out.full_id)}
-                        className="btn btn-primary"
-                        style={{
-                          padding: '5px 12px', fontSize: '0.82rem',
-                          background: out.has_social_caption
-                            ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                            : 'linear-gradient(135deg, #f59e0b, #ef4444)',
-                          border: 'none', fontWeight: 600
-                        }}
-                        title={out.has_social_caption ? 'Caption siap sosmed (AI)' : 'Generate caption AI dari transkrip'}
-                      >
-                        {out.has_social_caption ? (
-                          <><Copy size={12} /> ✨ Caption AI</>
+                  {/* Desktop columns */}
+                  {!isMobile && (
+                    <>
+                      {/* Caption - AI Social */}
+                      <td style={{ padding: '16px 12px', textAlign: 'center' }}>
+                        {out.has_caption ? (
+                          <button
+                            onClick={() => handleCopySocialCaption(out.full_id)}
+                            className="btn btn-primary"
+                            style={{
+                              padding: '5px 12px', fontSize: '0.82rem',
+                              background: out.has_social_caption
+                                ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                                : 'linear-gradient(135deg, #f59e0b, #ef4444)',
+                              border: 'none', fontWeight: 600
+                            }}
+                            title={out.has_social_caption ? 'Caption siap sosmed (AI)' : 'Generate caption AI dari transkrip'}
+                          >
+                            {out.has_social_caption ? (
+                              <><Copy size={12} /> ✨ AI</>
+                            ) : (
+                              <><Copy size={12} /> 🔄 Gen</>
+                            )}
+                          </button>
                         ) : (
-                          <><Copy size={12} /> 🔄 Generate AI</>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>N/A</span>
                         )}
+                      </td>
+
+                      {/* Download */}
+                      <td style={{ padding: '16px 12px', textAlign: 'center' }}>
+                        {out.video_file ? (
+                          <a href={getDownloadUrl(out.full_id)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }} download>
+                            <Download size={14} /> Unduh
+                          </a>
+                        ) : (
+                          <button className="btn btn-primary" disabled style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none', opacity: 0.5 }}>
+                            <Download size={14} /> -
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Uploaded to Sosmed Toggle */}
+                      <td style={{ padding: '16px 12px', textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleToggleUploaded(out.full_id)}
+                          className="btn"
+                          style={{
+                            padding: '6px 14px', fontSize: '0.85rem',
+                            background: out.uploaded_to_social ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            border: `1px solid ${out.uploaded_to_social ? 'rgba(34, 197, 94, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+                            color: out.uploaded_to_social ? 'var(--success)' : 'var(--text-muted)',
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            transition: 'all 0.2s',
+                          }}
+                          title={out.uploaded_to_social ? 'Klik untuk batalkan' : 'Klik untuk tandai sudah diupload'}
+                        >
+                          {out.uploaded_to_social ? <Check size={14} /> : <X size={14} />}
+                          {out.uploaded_to_social ? 'Sudah' : 'Belum'}
+                        </button>
+                        {out.uploaded_at && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {new Date(out.uploaded_at).toLocaleDateString()}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Delete */}
+                      <td style={{ padding: '16px 12px', textAlign: 'center' }}>
+                        <button onClick={() => setDeleteTarget(out.full_id)} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus video">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </>
+                  )}
+
+                  {/* Mobile Actions Menu */}
+                  {isMobile && (
+                    <td style={{ padding: '16px 12px', textAlign: 'center' }}>
+                      <button className="btn btn-secondary" style={{ padding: '6px', borderRadius: '6px' }} onClick={(e) => handleActionClick(e, out)}>
+                        <Settings size={16} />
                       </button>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>N/A</span>
-                    )}
-                  </td>
-
-                  {/* Download */}
-                  <td style={{ padding: '16px 12px', textAlign: 'center' }}>
-                    {out.video_file ? (
-                      <a
-                        href={getDownloadUrl(out.full_id)}
-                        className="btn btn-primary"
-                        style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                        download
-                      >
-                        <Download size={14} /> Unduh
-                      </a>
-                    ) : (
-                      <button className="btn btn-primary" disabled style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none', opacity: 0.5 }}>
-                        <Download size={14} /> -
-                      </button>
-                    )}
-                  </td>
-
-                  {/* Uploaded to Sosmed Toggle */}
-                  <td style={{ padding: '16px 12px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleToggleUploaded(out.full_id)}
-                      className="btn"
-                      style={{
-                        padding: '6px 14px',
-                        fontSize: '0.85rem',
-                        background: out.uploaded_to_social ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                        border: `1px solid ${out.uploaded_to_social ? 'rgba(34, 197, 94, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
-                        color: out.uploaded_to_social ? 'var(--success)' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        transition: 'all 0.2s',
-                      }}
-                      title={out.uploaded_to_social ? 'Klik untuk batalkan' : 'Klik untuk tandai sudah diupload'}
-                    >
-                      {out.uploaded_to_social ? <Check size={14} /> : <X size={14} />}
-                      {out.uploaded_to_social ? 'Sudah' : 'Belum'}
-                    </button>
-                    {out.uploaded_at && (
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {new Date(out.uploaded_at).toLocaleDateString()}
-                      </div>
-                    )}
-                  </td>
-
-                  {/* Delete */}
-                  <td style={{ padding: '16px 12px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => setDeleteTarget(out.full_id)}
-                      className="btn btn-danger"
-                      style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }}
-                      title="Hapus video"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -527,6 +609,91 @@ export default function OutputList() {
               </video>
             </div>
           </div>
+        </div>
+      )}
+      {/* Popups */}
+      {idPopup && (
+        <div style={{
+          position: 'fixed', left: idPopup.x, top: idPopup.y,
+          background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+          borderRadius: '8px', padding: '12px 16px', boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999, color: 'var(--text-primary)', fontSize: '0.85rem', maxWidth: '85vw', wordBreak: 'break-all'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Hash size={14} color="var(--accent-primary)" />
+            ID Lengkap
+          </div>
+          <div style={{ color: 'var(--text-secondary)' }}>{idPopup.videoId}</div>
+        </div>
+      )}
+
+      {timePopup && (
+        <div style={{
+          position: 'fixed', left: timePopup.x, top: timePopup.y,
+          background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+          borderRadius: '8px', padding: '12px 16px', boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999, color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '180px'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} color="var(--accent-primary)" />
+            Waktu Render
+          </div>
+          <div style={{ color: 'var(--text-secondary)' }}>
+            {new Date(timePopup.data.completed_at).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            <br />
+            <strong style={{ color: 'var(--text-primary)' }}>{new Date(timePopup.data.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</strong>
+          </div>
+        </div>
+      )}
+
+      {actionMenu && (
+        <div style={{
+          position: 'fixed', left: actionMenu.x, top: actionMenu.y,
+          background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+          borderRadius: '8px', padding: '6px', boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+          zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px'
+        }} onClick={(e) => e.stopPropagation()}>
+          
+          {actionMenu.out.video_file && (
+            <a
+              href={getDownloadUrl(actionMenu.out.full_id)}
+              className="btn btn-secondary hover-bg-light"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', padding: '8px 12px', border: 'none', textAlign: 'left', textDecoration: 'none' }}
+              download
+            >
+              <Download size={14} /> Unduh Video
+            </a>
+          )}
+
+          {actionMenu.out.has_caption && (
+            <button
+              className="btn btn-secondary hover-bg-light"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', padding: '8px 12px', border: 'none', textAlign: 'left' }}
+              onClick={() => { handleCopySocialCaption(actionMenu.out.full_id); setActionMenu(null); }}
+            >
+              <Copy size={14} color={actionMenu.out.has_social_caption ? "var(--success)" : "var(--warning)"} />
+              {actionMenu.out.has_social_caption ? "Salin Caption AI" : "Generate Caption AI"}
+            </button>
+          )}
+
+          <button
+            className="btn btn-secondary hover-bg-light"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', padding: '8px 12px', border: 'none', textAlign: 'left' }}
+            onClick={() => { handleToggleUploaded(actionMenu.out.full_id); setActionMenu(null); }}
+          >
+            {actionMenu.out.uploaded_to_social ? <X size={14} color="var(--warning)" /> : <Check size={14} color="var(--success)" />}
+            {actionMenu.out.uploaded_to_social ? "Batalkan Upload Sosmed" : "Tandai Upload Sosmed"}
+          </button>
+
+          <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
+          
+          <button
+            className="btn btn-secondary hover-bg-light"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', padding: '8px 12px', border: 'none', textAlign: 'left', color: 'var(--danger)' }}
+            onClick={() => { setDeleteTarget(actionMenu.out.full_id); setActionMenu(null); }}
+          >
+            <Trash2 size={14} /> Hapus Video
+          </button>
         </div>
       )}
     </div>

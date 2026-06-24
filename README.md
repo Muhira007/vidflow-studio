@@ -1,6 +1,10 @@
 # 🎬 Vidflow Studio
 
-**Automated affiliate video editing with streamlined workflow automation.** Fitur utama:
+**Automated affiliate video editing with streamlined workflow automation.**
+
+🌐 **Production:** [https://app.muhirastore.com](https://app.muhirastore.com)
+
+### Fitur utama:
 
 - 🤖 **VAD/AI Speech Detection** — deteksi suara manusia vs noise (Silero VAD)
 - ✂️ **Silence Cut 3 Level** — amplitude-based + AI-based cutting
@@ -10,7 +14,10 @@
 - 🎥 **Multi-Codec Render** — H.264 / H.265 / WebM, HD/FHD
 - 🏷️ **Product Group** — mapping folder → nama produk untuk konteks AI
 - ⏹️ **Cancel Processing** — batalkan pipeline yang sedang berjalan
-- ✅ **Batch Render** — select all + proses banyak video sekaligus
+- ✅ **Batch Render** — select all + auto-queue WAITING
+- 🔐 **JWT Authentication** — login dashboard (admin panel)
+- 📱 **Mobile Responsive** — akses dari HP via WiFi
+- 🐳 **Docker Deploy** — production-ready di VPS
 
 ## 🏗 Arsitektur Sistem
 

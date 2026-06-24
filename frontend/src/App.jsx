@@ -90,6 +90,13 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    const handleBgClick = () => setProfileOpen(false);
+    window.addEventListener('click', handleBgClick);
+    return () => window.removeEventListener('click', handleBgClick);
+  }, []);
 
   // Cek token yang sudah ada saat mount
   useEffect(() => {
@@ -156,16 +163,42 @@ function App() {
               </button>
               <div className="header-title" style={{ color: 'var(--text-secondary)' }}>Welcome to Vidflow Studio</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
               <span className="badge badge-success hide-mobile">System Online</span>
-              <button
-                onClick={handleLogout}
-                title="Logout"
-                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}
+              <div 
+                style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', cursor: 'pointer', userSelect: 'none', boxShadow: '0 2px 10px rgba(139, 92, 246, 0.3)' }}
+                onClick={(e) => { e.stopPropagation(); setProfileOpen(!profileOpen); }}
               >
-                <LogOut size={16} />
-              </button>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>V</div>
+                V
+              </div>
+
+              {profileOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '10px',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                  padding: '8px',
+                  zIndex: 9999,
+                  minWidth: '160px',
+                  animation: 'fadeIn 0.2s ease-out'
+                }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ padding: '8px 12px', marginBottom: '8px', borderBottom: '1px solid var(--border-light)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Akun Vidflow
+                  </div>
+                  <button
+                    onClick={() => { setProfileOpen(false); handleLogout(); }}
+                    className="hover-bg-light"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: 'none', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 500, textAlign: 'left' }}
+                  >
+                    <LogOut size={16} /> Keluar (Logout)
+                  </button>
+                </div>
+              )}
             </div>
           </header>
 

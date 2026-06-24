@@ -21,7 +21,8 @@ export default function ConfigCaption() {
   const templates = [
     { id: 'classic', label: 'Classic', desc: 'Teks polos biasa' },
     { id: 'karaoke_yellow', label: 'Karaoke Yellow', desc: 'Sorotan kata warna kuning ala CapCut' },
-    { id: 'karaoke_green', label: 'Karaoke Green', desc: 'Sorotan kata warna hijau neon' }
+    { id: 'karaoke_green', label: 'Karaoke Green', desc: 'Sorotan kata warna hijau neon' },
+    { id: 'karaoke_red', label: 'Karaoke Red', desc: 'Sorotan kata warna merah menyala' }
   ];
 
   useEffect(() => {
@@ -90,7 +91,7 @@ export default function ConfigCaption() {
 
       <div style={{ marginBottom: '32px' }}>
         <h3 style={{ marginBottom: '20px' }}>Pilihan Template</h3>
-        <div className="grid-cols-3">
+        <div className="grid-cols-4">
           {templates.map(tpl => {
             const isActive = tpl.id === captionTemplate;
             return (
