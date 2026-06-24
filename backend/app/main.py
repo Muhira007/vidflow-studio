@@ -2,7 +2,7 @@ import os
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from starlette.types import ASGIApp, Scope, Receive, Send
 from sqlalchemy import text
 
@@ -140,11 +140,11 @@ def public_download(video_id: str):
             if f.startswith(name_prefix) and f.lower().endswith((".mp4", ".webm", ".mkv")):
                 # X-Accel-Redirect: Nginx serve file langsung dari disk (kecepatan penuh)
                 accel_path = f"/_download/{folder}/{f}"
-                return FileResponse(
-                    "",
-                    media_type="application/octet-stream",
+                return Response(
+                    content="",
+                    status_code=200,
                     headers={
-                        "X-Accel-Redirect": accel_path,
+                        "X-Accel-Redirect": accel_path.encode("utf-8").decode("latin-1") if isinstance(accel_path, str) else accel_path,
                         "Content-Disposition": f'attachment; filename="{f}"',
                     },
                 )
