@@ -17,24 +17,4 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor: handle 401 — redirect ke login kalau token expired
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // JANGAN reload kalau ini request login (401 = password salah)
-      const isLoginRequest = error.config?.url?.includes('/auth/login');
-      if (!isLoginRequest) {
-        const token = localStorage.getItem('vidflow_token');
-        if (token) {
-          localStorage.removeItem('vidflow_token');
-          localStorage.removeItem('vidflow_user');
-          window.location.href = '/';
-        }
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
 export default api;
