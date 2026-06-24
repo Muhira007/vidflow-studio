@@ -1,7 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Download, Copy, Trash2, Check, X, AlertTriangle, Image as ImageIcon, Film, Filter, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { Download, Copy, Trash2, Check, X, AlertTriangle, Image as ImageIcon, Film, Filter, ChevronLeft, ChevronRight, Play, Loader2 } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
+
+// Helpers
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+function formatSpeed(bps) {
+  if (!bps || bps < 1) return '';
+  return formatFileSize(bps) + '/s';
+}
+function formatTime(sec) {
+  if (!sec || sec < 0.5) return '';
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
 
 // api.baseURL sekarang '/api' — works di lokal & production
 const basePath = '/api';
@@ -18,6 +35,18 @@ export default function OutputList() {
   const [showPlayer, setShowPlayer] = useState(false);
   const [playerVideoUrl, setPlayerVideoUrl] = useState('');
   const [playerVideoName, setPlayerVideoName] = useState('');
+
+  // Download Progress Modal
+  const [downloadState, setDownloadState] = useState({
+    show: false,
+    fileName: '',
+    progress: 0,
+    loaded: 0,
+    total: 0,
+    speed: 0,
+    status: '',  // 'connecting' | 'downloading' | 'finishing' | 'done' | 'error'
+    error: '',
+  });
 
   const fetchOutputs = async () => {
     try {
@@ -82,40 +111,78 @@ export default function OutputList() {
   };
 
   const handleDownload = async (videoId) => {
-    const loadingToast = toast.loading('Menyiapkan download...');
+    const fileName = videoId.split('/').pop() + '.mp4';
+    setDownloadState({
+      show: true, fileName, progress: 0, loaded: 0, total: 0,
+      speed: 0, status: 'connecting', error: '',
+    });
+
     try {
       const token = localStorage.getItem('vidflow_token');
       const url = `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
 
-      // Download via fetch → blob → trigger save dialog
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const contentLength = response.headers.get('Content-Length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      const reader = response.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+      const startTime = Date.now();
 
-      // Ambil nama file dari Content-Disposition header, atau fallback
-      const disposition = response.headers.get('Content-Disposition');
-      let filename = videoId.split('/').pop() + '.mp4';
-      if (disposition) {
-        const match = disposition.match(/filename="?(.+?)"?$/);
-        if (match) filename = match[1];
+      setDownloadState(prev => ({ ...prev, total, status: 'downloading' }));
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        chunks.push(value);
+        loaded += value.length;
+        const elapsed = (Date.now() - startTime) / 1000;
+        const speed = elapsed > 0 ? loaded / elapsed : 0;
+
+        setDownloadState(prev => ({
+          ...prev,
+          loaded,
+          progress: total ? Math.round((loaded * 100) / total) : 0,
+          speed,
+        }));
       }
 
-      // Trigger download
+      // Selesai — gabungkan chunks
+      setDownloadState(prev => ({ ...prev, status: 'finishing' }));
+      const blob = new Blob(chunks);
+      const blobUrl = URL.createObjectURL(blob);
+
+      const disposition = response.headers.get('Content-Disposition');
+      let finalName = fileName;
+      if (disposition) {
+        const match = disposition.match(/filename="?(.+?)"?$/);
+        if (match) finalName = match[1];
+      }
+
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = filename;
+      a.download = finalName;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(blobUrl);
 
-      toast.success('Download dimulai!', { id: loadingToast });
+      setDownloadState(prev => ({ ...prev, status: 'done' }));
+      setTimeout(() => setDownloadState(prev => ({ ...prev, show: false })), 1500);
     } catch (err) {
       console.error('Download error:', err);
-      toast.error('Gagal download: ' + err.message, { id: loadingToast });
+      setDownloadState(prev => ({
+        ...prev, status: 'error',
+        error: err.message || 'Gagal download',
+      }));
     }
+  };
+
+  const closeDownload = () => {
+    setDownloadState(prev => ({ ...prev, show: false }));
   };
 
   const handleToggleUploaded = async (videoId) => {
@@ -477,6 +544,115 @@ export default function OutputList() {
           </div>
         )}
       </div>
+
+      {/* Download Progress Modal */}
+      {downloadState.show && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+          zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div className="card glass-panel" style={{
+            width: '480px', animation: 'fadeIn 0.3s ease-out',
+            textAlign: 'center', padding: '40px 32px'
+          }}>
+            {/* Ikon */}
+            <div style={{
+              width: '72px', height: '72px', borderRadius: '20px',
+              margin: '0 auto 24px',
+              background: downloadState.status === 'done'
+                ? 'rgba(34, 197, 94, 0.15)'
+                : downloadState.status === 'error'
+                ? 'rgba(239, 68, 68, 0.15)'
+                : 'rgba(59, 130, 246, 0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: downloadState.status === 'downloading' ? 'pulse 1.5s infinite' : 'none',
+            }}>
+              {downloadState.status === 'done' ? (
+                <Check size={36} style={{ color: '#22c55e' }} />
+              ) : downloadState.status === 'error' ? (
+                <X size={36} style={{ color: '#ef4444' }} />
+              ) : (
+                <Download size={36} style={{ color: 'var(--accent-primary)' }} />
+              )}
+            </div>
+
+            {/* Status text */}
+            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)' }}>
+              {downloadState.status === 'connecting' && 'Menghubungkan ke server...'}
+              {downloadState.status === 'downloading' && 'Mengunduh video...'}
+              {downloadState.status === 'finishing' && 'Menyelesaikan...'}
+              {downloadState.status === 'done' && 'Download selesai!'}
+              {downloadState.status === 'error' && 'Download gagal'}
+            </h3>
+
+            <p style={{
+              color: 'var(--text-secondary)', fontSize: '0.85rem',
+              margin: '0 0 24px', wordBreak: 'break-all',
+            }}>
+              {downloadState.status === 'error'
+                ? downloadState.error
+                : downloadState.fileName
+              }
+            </p>
+
+            {/* Progress Bar */}
+            {downloadState.status === 'downloading' && (
+              <>
+                <div style={{
+                  height: '8px', background: 'rgba(255,255,255,0.1)',
+                  borderRadius: '4px', overflow: 'hidden', marginBottom: '16px'
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${downloadState.progress}%`,
+                    background: 'var(--accent-primary)',
+                    borderRadius: '4px',
+                    transition: 'width 0.2s ease-out',
+                  }} />
+                </div>
+
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  fontSize: '0.85rem', color: 'var(--text-muted)',
+                  marginBottom: '8px'
+                }}>
+                  <span>{downloadState.progress}%</span>
+                  <span>
+                    {formatFileSize(downloadState.loaded)}
+                    {downloadState.total > 0 && ` / ${formatFileSize(downloadState.total)}`}
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {formatSpeed(downloadState.speed)}
+                  {downloadState.speed > 0 && downloadState.total > 0 && (
+                    <span> · Sisa ±{formatTime((downloadState.total - downloadState.loaded) / downloadState.speed)}</span>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Selesai / Error */}
+            {(downloadState.status === 'done' || downloadState.status === 'error') && (
+              <button
+                className="btn btn-primary"
+                onClick={closeDownload}
+                style={{ marginTop: '8px', padding: '10px 32px' }}
+              >
+                {downloadState.status === 'done' ? 'Tutup' : 'OK'}
+              </button>
+            )}
+
+            {/* Connecting spinner */}
+            {downloadState.status === 'connecting' && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <Loader2 size={24} className="spinner" style={{ margin: '0 auto', color: 'var(--accent-primary)' }} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Video Player Modal */}
       {showPlayer && (
