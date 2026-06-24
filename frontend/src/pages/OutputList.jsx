@@ -36,18 +36,6 @@ export default function OutputList() {
   const [playerVideoUrl, setPlayerVideoUrl] = useState('');
   const [playerVideoName, setPlayerVideoName] = useState('');
 
-  // Download Progress Modal
-  const [downloadState, setDownloadState] = useState({
-    show: false,
-    fileName: '',
-    progress: 0,
-    loaded: 0,
-    total: 0,
-    speed: 0,
-    status: '',  // 'connecting' | 'downloading' | 'finishing' | 'done' | 'error'
-    error: '',
-  });
-
   const fetchOutputs = async () => {
     try {
       const res = await api.get('/outputs/');
@@ -110,31 +98,11 @@ export default function OutputList() {
     }
   };
 
-  const handleDownload = (videoId) => {
-    const fileName = videoId.split('/').pop() + '.mp4';
+  const getDownloadUrl = (videoId) => {
     const token = localStorage.getItem('vidflow_token');
-    const url = `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
-
-    // Tampilkan modal
-    setDownloadState({
-      show: true, fileName, progress: 0, loaded: 0, total: 0,
-      speed: 0, status: 'connecting', error: '',
-    });
-
-    // Buka download di tab baru — server kirim Content-Disposition: attachment
-    // Browser akan auto-tutup tab & mulai download native
-    const w = window.open(url, '_blank');
-
-    // Auto-close modal setelah beberapa detik
-    setTimeout(() => {
-      setDownloadState(prev => ({ ...prev, status: 'done' }));
-      setTimeout(() => setDownloadState(prev => ({ ...prev, show: false })), 2000);
-    }, 4000);
+    return `${basePath}/outputs/${videoId}/download?token=${encodeURIComponent(token || '')}`;
   };
 
-  const closeDownload = () => {
-    setDownloadState(prev => ({ ...prev, show: false }));
-  };
 
   const handleToggleUploaded = async (videoId) => {
     try {
@@ -393,14 +361,20 @@ export default function OutputList() {
 
                   {/* Download */}
                   <td style={{ padding: '16px 12px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleDownload(out.full_id)}
-                      className="btn btn-primary"
-                      style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none' }}
-                      disabled={!out.video_file}
-                    >
-                      <Download size={14} /> Unduh
-                    </button>
+                    {out.video_file ? (
+                      <a
+                        href={getDownloadUrl(out.full_id)}
+                        className="btn btn-primary"
+                        style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        download
+                      >
+                        <Download size={14} /> Unduh
+                      </a>
+                    ) : (
+                      <button className="btn btn-primary" disabled style={{ padding: '6px 14px', fontSize: '0.85rem', background: 'var(--success)', border: 'none', opacity: 0.5 }}>
+                        <Download size={14} /> -
+                      </button>
+                    )}
                   </td>
 
                   {/* Uploaded to Sosmed Toggle */}
@@ -495,115 +469,6 @@ export default function OutputList() {
           </div>
         )}
       </div>
-
-      {/* Download Progress Modal */}
-      {downloadState.show && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-          zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <div className="card glass-panel" style={{
-            width: '480px', animation: 'fadeIn 0.3s ease-out',
-            textAlign: 'center', padding: '40px 32px'
-          }}>
-            {/* Ikon */}
-            <div style={{
-              width: '72px', height: '72px', borderRadius: '20px',
-              margin: '0 auto 24px',
-              background: downloadState.status === 'done'
-                ? 'rgba(34, 197, 94, 0.15)'
-                : downloadState.status === 'error'
-                ? 'rgba(239, 68, 68, 0.15)'
-                : 'rgba(59, 130, 246, 0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: downloadState.status === 'downloading' ? 'pulse 1.5s infinite' : 'none',
-            }}>
-              {downloadState.status === 'done' ? (
-                <Check size={36} style={{ color: '#22c55e' }} />
-              ) : downloadState.status === 'error' ? (
-                <X size={36} style={{ color: '#ef4444' }} />
-              ) : (
-                <Download size={36} style={{ color: 'var(--accent-primary)' }} />
-              )}
-            </div>
-
-            {/* Status text */}
-            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)' }}>
-              {downloadState.status === 'connecting' && 'Menghubungkan ke server...'}
-              {downloadState.status === 'downloading' && 'Mengunduh video...'}
-              {downloadState.status === 'finishing' && 'Menyelesaikan...'}
-              {downloadState.status === 'done' && 'Download selesai!'}
-              {downloadState.status === 'error' && 'Download gagal'}
-            </h3>
-
-            <p style={{
-              color: 'var(--text-secondary)', fontSize: '0.85rem',
-              margin: '0 0 24px', wordBreak: 'break-all',
-            }}>
-              {downloadState.status === 'error'
-                ? downloadState.error
-                : downloadState.fileName
-              }
-            </p>
-
-            {/* Progress Bar */}
-            {downloadState.status === 'downloading' && (
-              <>
-                <div style={{
-                  height: '8px', background: 'rgba(255,255,255,0.1)',
-                  borderRadius: '4px', overflow: 'hidden', marginBottom: '16px'
-                }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${downloadState.progress}%`,
-                    background: 'var(--accent-primary)',
-                    borderRadius: '4px',
-                    transition: 'width 0.2s ease-out',
-                  }} />
-                </div>
-
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  fontSize: '0.85rem', color: 'var(--text-muted)',
-                  marginBottom: '8px'
-                }}>
-                  <span>{downloadState.progress}%</span>
-                  <span>
-                    {formatFileSize(downloadState.loaded)}
-                    {downloadState.total > 0 && ` / ${formatFileSize(downloadState.total)}`}
-                  </span>
-                </div>
-
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {formatSpeed(downloadState.speed)}
-                  {downloadState.speed > 0 && downloadState.total > 0 && (
-                    <span> · Sisa ±{formatTime((downloadState.total - downloadState.loaded) / downloadState.speed)}</span>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Selesai / Error */}
-            {(downloadState.status === 'done' || downloadState.status === 'error') && (
-              <button
-                className="btn btn-primary"
-                onClick={closeDownload}
-                style={{ marginTop: '8px', padding: '10px 32px' }}
-              >
-                {downloadState.status === 'done' ? 'Tutup' : 'OK'}
-              </button>
-            )}
-
-            {/* Connecting spinner */}
-            {downloadState.status === 'connecting' && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                <Loader2 size={24} className="spinner" style={{ margin: '0 auto', color: 'var(--accent-primary)' }} />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Video Player Modal */}
       {showPlayer && (
