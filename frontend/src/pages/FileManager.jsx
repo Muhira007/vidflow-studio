@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2, Edit3, Image as ImageIcon, Play, X, MessageSquare, Save } from 'lucide-react';
+import { Folder, FileVideo, ChevronLeft, MoreVertical, UploadCloud, Plus, Trash2, Edit3, Image as ImageIcon, Play, X, MessageSquare, Save, ArrowRightLeft } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -57,6 +57,12 @@ export default function FileManager() {
   const [showPlayer, setShowPlayer] = useState(false);
   const [playerVideoUrl, setPlayerVideoUrl] = useState('');
   const [playerVideoName, setPlayerVideoName] = useState('');
+
+  // Move File State
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [moveSourceFolder, setMoveSourceFolder] = useState('');
+  const [moveFileName, setMoveFileName] = useState('');
+  const [moveDestFolder, setMoveDestFolder] = useState('');
 
   // Upload Progress State
   const [uploadState, setUploadState] = useState({
@@ -200,11 +206,12 @@ export default function FileManager() {
         else if (showRenameModal) setShowRenameModal(false);
         else if (showCreateModal) setShowCreateModal(false);
         else if (showCommentModal) setShowCommentModal(false);
+        else if (showMoveModal) setShowMoveModal(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showPlayer, deleteConfirm, showRenameModal, showCreateModal, showCommentModal]);
+  }, [showPlayer, deleteConfirm, showRenameModal, showCreateModal, showCommentModal, showMoveModal]);
 
   const handleContextMenu = (e, type, target) => {
     e.preventDefault();
@@ -377,6 +384,32 @@ export default function FileManager() {
       const detail = error.response?.data?.detail;
       if (detail) errMsg += ': ' + (typeof detail === 'string' ? detail : JSON.stringify(detail));
       toast.error(errMsg);
+    }
+  };
+
+  const submitMove = async () => {
+    if (!moveSourceFolder || !moveFileName || !moveDestFolder) {
+      toast.error('Pilih folder tujuan');
+      return;
+    }
+    if (moveDestFolder === moveSourceFolder) {
+      toast.error('Folder tujuan sama dengan folder asal');
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append('source_folder', moveSourceFolder);
+      formData.append('filename', moveFileName);
+      formData.append('dest_folder', moveDestFolder);
+      await api.post('/fs/move', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success(`File dipindahkan ke ${moveDestFolder}`);
+      setShowMoveModal(false);
+      fetchItems();
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Gagal memindahkan file');
     }
   };
 
@@ -711,6 +744,15 @@ export default function FileManager() {
               <div className="context-menu-item" onClick={() => { openVideoPlayer(contextMenu.target); setContextMenu({...contextMenu, visible:false}); }}>
                 <Play size={16} /> Preview Video
               </div>
+              <div className="context-menu-item" onClick={() => {
+                setMoveSourceFolder(currentFolder || items.find(f => f.files?.includes(contextMenu.target))?.name);
+                setMoveFileName(contextMenu.target);
+                setMoveDestFolder('');
+                setShowMoveModal(true);
+                setContextMenu({...contextMenu, visible: false});
+              }}>
+                <ArrowRightLeft size={16} /> Pindahkan File
+              </div>
               <div className="context-menu-item text-danger" onClick={() => handleDelete(contextMenu.target, 'file')}>
                 <Trash2 size={16} /> {selectedItems.length > 1 ? `Hapus ${selectedItems.length} File` : `Hapus File`}
               </div>
@@ -834,6 +876,57 @@ export default function FileManager() {
               <button className="btn btn-secondary" onClick={() => setShowCommentModal(false)}>Batal</button>
               <button className="btn btn-primary" onClick={submitComment}>
                 <Save size={16} /> Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move File Modal */}
+      {showMoveModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card glass-panel" style={{ width: '420px', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <ArrowRightLeft size={24} style={{ color: 'var(--accent-primary)' }} />
+              <h3 style={{ margin: 0 }}>Pindahkan File</h3>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>File:</div>
+              <div style={{
+                fontFamily: 'monospace', fontSize: '0.85rem',
+                color: 'var(--text-primary)', background: 'rgba(255,255,255,0.05)',
+                padding: '6px 10px', borderRadius: '6px', wordBreak: 'break-all'
+              }}>
+                {moveSourceFolder}/{moveFileName}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label className="form-label" style={{ color: 'var(--text-secondary)' }}>
+                Pindahkan ke Folder
+              </label>
+              <select
+                className="form-control"
+                value={moveDestFolder}
+                onChange={(e) => setMoveDestFolder(e.target.value)}
+                style={{ fontSize: '0.9rem' }}
+              >
+                <option value="">-- Pilih folder tujuan --</option>
+                {items
+                  .filter(item => item.type === 'folder' && item.name !== moveSourceFolder)
+                  .map(folder => (
+                    <option key={folder.name} value={folder.name}>
+                      {folder.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowMoveModal(false)}>Batal</button>
+              <button className="btn btn-primary" onClick={submitMove} disabled={!moveDestFolder}>
+                <ArrowRightLeft size={16} /> Pindahkan
               </button>
             </div>
           </div>

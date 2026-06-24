@@ -137,6 +137,89 @@ def delete_file(folder: str, filename: str, db: Session = Depends(get_db)):
     return {"message": f"File '{filename}' deleted", "video_id": video_id}
 
 
+@router.post("/move")
+def move_file(
+    source_folder: str = Form(...),
+    filename: str = Form(...),
+    dest_folder: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Pindahkan file video dari source_folder ke dest_folder.
+
+    Juga update ID Video di database (karena ID mengandung nama folder).
+    """
+    # Validasi
+    if ".." in source_folder or "/" in source_folder:
+        raise HTTPException(status_code=400, detail="Invalid source folder")
+    if ".." in dest_folder or "/" in dest_folder:
+        raise HTTPException(status_code=400, detail="Invalid destination folder")
+    if ".." in filename or "/" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    src_path = os.path.join(BASE_DIR, source_folder, filename)
+    dest_dir = os.path.join(BASE_DIR, dest_folder)
+
+    if not os.path.isfile(src_path):
+        raise HTTPException(status_code=404, detail="Source file not found")
+    if not os.path.isdir(dest_dir):
+        raise HTTPException(status_code=404, detail="Destination folder not found")
+
+    dest_path = os.path.join(dest_dir, filename)
+    if os.path.exists(dest_path):
+        raise HTTPException(status_code=409, detail="File already exists in destination")
+
+    # Move file
+    shutil.move(src_path, dest_path)
+
+    # Update Video record (ID = folder/filename_without_ext)
+    name_no_ext = os.path.splitext(filename)[0]
+    old_video_id = f"{source_folder}/{name_no_ext}"
+    new_video_id = f"{dest_folder}/{name_no_ext}"
+
+    video = db.query(Video).filter(Video.id == old_video_id).first()
+    if video:
+        # Check if new ID already exists
+        existing = db.query(Video).filter(Video.id == new_video_id).first()
+        if existing:
+            # Merge: delete old record, keep existing
+            db.query(JobLog).filter(JobLog.video_id == video.id).delete()
+            db.delete(video)
+        else:
+            # Update ID + folder reference
+            db.query(JobLog).filter(JobLog.video_id == video.id).update(
+                {JobLog.video_id: new_video_id}
+            )
+            video.id = new_video_id
+            video.source_folder = dest_folder
+        db.commit()
+
+    # Also move output files if exist
+    src_out_dir = os.path.join(OUTPUT_DIR, source_folder)
+    if os.path.isdir(src_out_dir):
+        for f in os.listdir(src_out_dir):
+            if f.startswith(name_no_ext):
+                dest_out_dir = os.path.join(OUTPUT_DIR, dest_folder)
+                os.makedirs(dest_out_dir, exist_ok=True)
+                shutil.move(
+                    os.path.join(src_out_dir, f),
+                    os.path.join(dest_out_dir, f),
+                )
+
+    # Remove empty source folder
+    try:
+        remaining = os.listdir(os.path.join(BASE_DIR, source_folder))
+        if not remaining:
+            os.rmdir(os.path.join(BASE_DIR, source_folder))
+    except Exception:
+        pass
+
+    return {
+        "message": f"File '{filename}' dipindahkan ke '{dest_folder}'",
+        "old_video_id": old_video_id,
+        "new_video_id": new_video_id,
+    }
+
+
 @router.get("/stream/{folder}/{filename}")
 def stream_video(folder: str, filename: str):
     """Stream a video file from source/, tmp/, or output/ directory with range request support."""
