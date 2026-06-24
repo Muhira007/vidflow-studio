@@ -86,28 +86,28 @@ def downscale_to_1080p(input_path: str, output_path: str, is_10bit: bool = False
         scale_filter = 'scale=1920:1080:force_original_aspect_ratio=decrease'
 
     if is_10bit:
-        # H.265 10-bit — pertahankan kualitas warna tinggi
+        # H.265 10-bit — CRF 18 (visually lossless), preset fast
         (
             ffmpeg
             .input(input_path)
             .output(
                 output_path,
                 vf=scale_filter,
-                vcodec='libx265', crf=10, preset='medium',
+                vcodec='libx265', crf=18, preset='fast',
                 pix_fmt='yuv420p10le',
                 acodec='copy',
             )
             .run(overwrite_output=True)
         )
     else:
-        # H.264 8-bit — CRF sangat rendah untuk kualitas transparan
+        # H.264 8-bit — CRF 18 (visually lossless), preset fast
         (
             ffmpeg
             .input(input_path)
             .output(
                 output_path,
                 vf=scale_filter,
-                vcodec='libx264', crf=8, preset='medium',
+                vcodec='libx264', crf=18, preset='fast',
                 pix_fmt='yuv420p',
                 acodec='copy',
             )
@@ -247,7 +247,7 @@ def render_final_video(input_video: str, output_video: str, resolution: str = "1
     (
         ffmpeg
         .output(video, audio, output_video,
-                vcodec=codec["vcodec"], preset='fast', crf=23,
+                vcodec=codec["vcodec"], preset='veryfast', crf=23,
                 acodec=codec["acodec"],
                 pix_fmt='yuv420p')  # Konversi ke 8-bit untuk kompatibilitas maksimum
         .run(overwrite_output=True)
