@@ -1,52 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Key } from 'lucide-react';
-
-const API_BASE_URL = 'http://localhost:8000/api';
+import api from '../api';
+import toast from 'react-hot-toast';
 
 export default function GlobalSettings() {
   const [openaiKey, setOpenaiKey] = useState('');
   const [deepseekKey, setDeepseekKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
-    // Load initial settings
-    fetch(`${API_BASE_URL}/settings`)
-      .then(res => res.json())
-      .then(data => {
-        setOpenaiKey(data.openai_api_key || '');
-        setDeepseekKey(data.deepseek_api_key || '');
+    api.get('/settings')
+      .then(res => {
+        setOpenaiKey(res.data.openai_api_key || '');
+        setDeepseekKey(res.data.deepseek_api_key || '');
       })
       .catch(err => console.error("Error loading settings:", err));
   }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
-    setSaveMessage('');
-    
     try {
-      const response = await fetch(`${API_BASE_URL}/settings`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          openai_api_key: openaiKey,
-          deepseek_api_key: deepseekKey
-        })
+      await api.put('/settings', {
+        openai_api_key: openaiKey,
+        deepseek_api_key: deepseekKey
       });
-      
-      if (response.ok) {
-        setSaveMessage('API Keys saved successfully!');
-      } else {
-        setSaveMessage('Failed to save API Keys.');
-      }
+      toast.success('API Keys saved!');
     } catch (error) {
-      console.error('Error saving settings:', error);
-      setSaveMessage('Error connecting to server.');
+      toast.error('Gagal menyimpan API Keys');
     } finally {
       setIsSaving(false);
-      setTimeout(() => setSaveMessage(''), 3000);
     }
   };
 
@@ -97,12 +79,6 @@ export default function GlobalSettings() {
             />
           </div>
         </div>
-
-        {saveMessage && (
-          <div style={{ marginTop: '16px', color: saveMessage.includes('success') ? 'var(--success-color)' : 'var(--danger-color)' }}>
-            {saveMessage}
-          </div>
-        )}
 
         <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}>
           <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>

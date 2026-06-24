@@ -139,9 +139,8 @@ export default function FileManager() {
   const openVideoPlayer = (filename) => {
     const folder = currentFolder;
     if (!folder) return;
-    // Build stream URL using the same base as our API
-    const base = api.defaults.baseURL || 'http://localhost:8000/api';
-    const url = `${base}/fs/stream/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
+    // Gunakan relative URL — works di lokal (Vite proxy) & production (Nginx)
+    const url = `/api/fs/stream/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
     setPlayerVideoUrl(url);
     setPlayerVideoName(filename);
     setShowPlayer(true);

@@ -3,7 +3,8 @@ import { Download, Copy, Trash2, Check, X, AlertTriangle, Image as ImageIcon, Fi
 import api from '../api';
 import toast from 'react-hot-toast';
 
-const API_BASE = api.defaults.baseURL || 'http://localhost:8000/api';
+// api.baseURL sekarang '/api' — works di lokal & production
+const basePath = '/api';
 const PER_PAGE = 20;
 
 export default function OutputList() {
@@ -81,7 +82,7 @@ export default function OutputList() {
   };
 
   const handleDownload = (videoId) => {
-    const url = `${API_BASE}/outputs/${videoId}/download`;
+    const url = `${basePath}/outputs/${videoId}/download`;
     // Buka di tab baru untuk trigger download
     window.open(url, '_blank');
   };
@@ -133,7 +134,7 @@ export default function OutputList() {
 
   // Video player — pakai fs/stream agar video di-play inline (bukan download)
   const openVideoPlayer = (videoId, videoFileName) => {
-    const url = `${API_BASE}/fs/stream/${videoId}/${encodeURIComponent(videoFileName)}`;
+    const url = `${basePath}/fs/stream/${videoId}/${encodeURIComponent(videoFileName)}`;
     setPlayerVideoUrl(url);
     setPlayerVideoName(videoId);
     setShowPlayer(true);
@@ -259,7 +260,7 @@ export default function OutputList() {
                     >
                       {out.cover_file ? (
                         <img
-                          src={`${API_BASE}/fs/stream/${encodeURIComponent(out.group || out.id)}/${encodeURIComponent(out.cover_file.name)}`}
+                          src={`${basePath}/fs/stream/${encodeURIComponent(out.group || out.id)}/${encodeURIComponent(out.cover_file.name)}`}
                           alt={out.id}
                           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           onError={(e) => { e.target.style.display = 'none'; }}
