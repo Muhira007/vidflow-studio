@@ -1,7 +1,7 @@
 """Auth router — login endpoint untuk mendapatkan JWT token."""
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
-from app.auth import verify_admin, create_access_token
+from app.auth import verify_admin, create_access_token, verify_token
 
 router = APIRouter()
 
@@ -34,6 +34,6 @@ def login(body: LoginRequest):
 
 
 @router.get("/me")
-def me():
-    """Check token validity (dilindungi middleware di main.py)."""
-    return {"status": "authenticated"}
+def me(user: dict = Depends(verify_token)):
+    """Check token validity — requires valid JWT."""
+    return {"status": "authenticated", "username": user["username"]}

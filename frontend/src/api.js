@@ -21,14 +21,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Jika API return 401 dan ada token (berarti token expired/invalid)
     if (error.response?.status === 401) {
-      const token = localStorage.getItem('vidflow_token');
-      if (token) {
-        localStorage.removeItem('vidflow_token');
-        localStorage.removeItem('vidflow_user');
-        // Reload halaman — App.jsx akan redirect ke login
-        window.location.reload();
+      // JANGAN reload kalau ini request login (401 = password salah)
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (!isLoginRequest) {
+        const token = localStorage.getItem('vidflow_token');
+        if (token) {
+          localStorage.removeItem('vidflow_token');
+          localStorage.removeItem('vidflow_user');
+          window.location.href = '/';
+        }
       }
     }
     return Promise.reject(error);
