@@ -127,29 +127,24 @@ from app.models import Video  # noqa: E402
 
 @app.get("/api/outputs/{video_id:path}/download")
 def public_download(video_id: str):
-    """Download rendered video — PUBLIC (no auth) karena dipakai window.open()."""
-    db = SessionLocal()
-    try:
-        video = db.query(Video).filter(Video.id == video_id).first()
-        if not video:
-            raise HTTPException(status_code=404, detail="Video not found")
+    """Download rendered video — PUBLIC. Cari file langsung tanpa DB query."""
+    # Parse folder & filename dari URL: "FOLDER/FILENAME"
+    parts = video_id.rsplit("/", 1)
+    folder = parts[0] if len(parts) > 1 else video_id
+    name_prefix = parts[-1]
 
-        out_folder = video.source_folder or video_id
-        output_folder = os.path.join(OUTPUT_DIR, out_folder)
-        if os.path.isdir(output_folder):
-            # Handle nested path (e.g., "folder/filename" → use filename part)
-            search_name = video_id.split("/")[-1] if "/" in video_id else video_id
-            for f in os.listdir(output_folder):
-                if f.startswith(search_name) and f.lower().endswith((".mp4", ".webm", ".mkv")):
-                    file_path = os.path.join(output_folder, f)
-                    return FileResponse(
-                        file_path, media_type="video/mp4", filename=f,
-                        headers={"Accept-Ranges": "bytes"},
-                    )
+    output_folder = os.path.join(OUTPUT_DIR, folder)
+    if os.path.isdir(output_folder):
+        # Cari file output dengan prefix nama (tanpa cek DB)
+        for f in sorted(os.listdir(output_folder), reverse=True):
+            if f.startswith(name_prefix) and f.lower().endswith((".mp4", ".webm", ".mkv")):
+                file_path = os.path.join(output_folder, f)
+                return FileResponse(
+                    file_path, media_type="video/mp4", filename=f,
+                    headers={"Accept-Ranges": "bytes", "X-Accel-Buffering": "no"},
+                )
 
-        raise HTTPException(status_code=404, detail="Output file not found")
-    finally:
-        db.close()
+    raise HTTPException(status_code=404, detail="Output file not found")
 
 
 # ─── Auth router (public — login endpoint) ───
