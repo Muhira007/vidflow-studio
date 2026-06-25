@@ -9,7 +9,7 @@ echo Menghentikan semua service...
 echo (Frontend + Celery + Backend + Redis + PostgreSQL)
 echo.
 
-wsl -d Ubuntu-26.04 --cd "/home/kangdemuh/aplikasi/video-editor/claude2" bash -c "./stop-all.sh"
+wsl -d Ubuntu-26.04 --cd "/home/kangdemuh/aplikasi/vidflow" bash -c "./stop-all.sh"
 
 echo.
 echo ========================================

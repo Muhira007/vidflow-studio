@@ -1,11 +1,11 @@
 """Central path configuration. All directories resolved from APP_HOME env var.
 
-Local dev:  APP_HOME defaults to /home/kangdemuh/aplikasi/video-editor/claude2
+Local dev:  APP_HOME defaults to /home/kangdemuh/aplikasi/vidflow
 Docker:     APP_HOME=/home/app (set in docker-compose.yml)
 """
 import os
 
-APP_HOME = os.getenv("APP_HOME", "/home/kangdemuh/aplikasi/video-editor/claude2")
+APP_HOME = os.getenv("APP_HOME", "/home/kangdemuh/aplikasi/vidflow")
 
 SOURCE_DIR = os.path.join(APP_HOME, "source")
 OUTPUT_DIR = os.path.join(APP_HOME, "output")

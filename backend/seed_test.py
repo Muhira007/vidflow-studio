@@ -35,7 +35,7 @@ def seed_database():
     db.close()
     
     # Create source video
-    source_dir = f"/home/kangdemuh/aplikasi/video-editor/claude2/source/{vid_id}"
+    source_dir = f"/home/kangdemuh/aplikasi/vidflow/source/{vid_id}"
     os.makedirs(source_dir, exist_ok=True)
     out_file = os.path.join(source_dir, "input.mp4")
     

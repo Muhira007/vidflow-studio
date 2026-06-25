@@ -5,7 +5,7 @@
 # ============================================
 set -e
 
-PROJECT_DIR="/home/kangdemuh/aplikasi/video-editor/claude2"
+PROJECT_DIR="/home/kangdemuh/aplikasi/vidflow"
 LOGS_DIR="$PROJECT_DIR/logs"
 
 # Load nvm + pastikan pakai Node.js & npm dari WSL (bukan dari Windows)

@@ -27,9 +27,12 @@ const PER_PAGE = 20;
 export default function OutputList() {
   const [outputs, setOutputs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // null atau array of ids
   const [filterUploaded, setFilterUploaded] = useState('all'); // 'all' | 'yes' | 'no'
+  const [sortBy, setSortBy] = useState('date_desc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedOutputs, setSelectedOutputs] = useState(new Set());
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   // Video Player Modal
   const [showPlayer, setShowPlayer] = useState(false);
@@ -191,15 +194,28 @@ export default function OutputList() {
     }
   };
 
-  const executeDelete = async (videoId) => {
+  const executeDelete = async (videoIds) => {
     setDeleteTarget(null);
-    try {
-      await api.delete(`/outputs/${videoId}`);
-      toast.success(`Video ${videoId} berhasil dihapus!`);
-      fetchOutputs();
-    } catch (error) {
-      toast.error('Gagal menghapus: ' + (error.response?.data?.detail || error.message));
+    setIsDeletingBulk(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const videoId of videoIds) {
+      try {
+        await api.delete(`/outputs/${videoId}`);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to delete ${videoId}`, error);
+        failCount++;
+      }
     }
+
+    if (successCount > 0) toast.success(`${successCount} video berhasil dihapus!`);
+    if (failCount > 0) toast.error(`${failCount} video gagal dihapus.`);
+    
+    setSelectedOutputs(new Set());
+    setIsDeletingBulk(false);
+    fetchOutputs();
   };
 
   const formatSize = (bytes) => {
@@ -208,21 +224,67 @@ export default function OutputList() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // Filter & Pagination (client-side)
+  // Filter, Sort & Pagination (client-side)
   const filteredOutputs = useMemo(() => {
-    if (filterUploaded === 'all') return outputs;
-    const target = filterUploaded === 'yes';
-    return outputs.filter(o => o.uploaded_to_social === target);
-  }, [outputs, filterUploaded]);
+    let result = [...outputs];
+    
+    if (filterUploaded !== 'all') {
+      const target = filterUploaded === 'yes';
+      result = result.filter(o => o.uploaded_to_social === target);
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === 'group_asc') {
+        const groupA = a.group || '';
+        const groupB = b.group || '';
+        return groupA.localeCompare(groupB);
+      } else if (sortBy === 'group_desc') {
+        const groupA = a.group || '';
+        const groupB = b.group || '';
+        return groupB.localeCompare(groupA);
+      } else if (sortBy === 'date_asc') {
+        const dateA = new Date(a.completed_at || 0).getTime();
+        const dateB = new Date(b.completed_at || 0).getTime();
+        return dateA - dateB;
+      } else { // date_desc
+        const dateA = new Date(a.completed_at || 0).getTime();
+        const dateB = new Date(b.completed_at || 0).getTime();
+        return dateB - dateA;
+      }
+    });
+
+    return result;
+  }, [outputs, filterUploaded, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOutputs.length / PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedOutputs = filteredOutputs.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
-  // Reset page when filter changes
+  // Reset page when filter or sort changes
   const handleFilterChange = (value) => {
     setFilterUploaded(value);
     setCurrentPage(1);
+    setSelectedOutputs(new Set());
+  };
+
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    setCurrentPage(1);
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedOutputs(new Set(filteredOutputs.map(o => o.full_id)));
+    } else {
+      setSelectedOutputs(new Set());
+    }
+  };
+
+  const handleSelect = (fullId) => {
+    const next = new Set(selectedOutputs);
+    if (next.has(fullId)) next.delete(fullId);
+    else next.add(fullId);
+    setSelectedOutputs(next);
   };
 
   // Video player — pakai fs/stream agar video di-play inline (bukan download)
@@ -253,7 +315,7 @@ export default function OutputList() {
   return (
     <div>
       {/* DELETE CONFIRMATION MODAL */}
-      {deleteTarget && (
+      {deleteTarget && deleteTarget.length > 0 && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)',
@@ -266,13 +328,14 @@ export default function OutputList() {
               <h3 style={{ margin: 0 }}>Konfirmasi Penghapusan</h3>
             </div>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
-              Yakin ingin menghapus <strong style={{ color: 'var(--danger)' }}>HARD DELETE</strong> video <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget}</strong>?<br /><br />
+              Yakin ingin menghapus <strong style={{ color: 'var(--danger)' }}>HARD DELETE</strong> {deleteTarget.length === 1 ? 'video' : `${deleteTarget.length} video`} <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.length === 1 ? deleteTarget[0] : ''}</strong>?<br /><br />
               Semua file di folder <b>Source</b>, <b>Tmp</b>, dan <b>Output</b> akan dihapus. Tindakan ini tidak dapat dibatalkan!
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setDeleteTarget(null)}>Batal</button>
-              <button className="btn btn-primary" style={{ background: 'var(--danger)', border: 'none', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }} onClick={() => executeDelete(deleteTarget)}>
-                <Trash2 size={16} /> Ya, Hapus!
+              <button className="btn btn-secondary" onClick={() => setDeleteTarget(null)} disabled={isDeletingBulk}>Batal</button>
+              <button className="btn btn-primary" style={{ background: 'var(--danger)', border: 'none', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }} onClick={() => executeDelete(deleteTarget)} disabled={isDeletingBulk}>
+                {isDeletingBulk ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />} 
+                {isDeletingBulk ? 'Menghapus...' : 'Ya, Hapus!'}
               </button>
             </div>
           </div>
@@ -290,6 +353,30 @@ export default function OutputList() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {selectedOutputs.size > 0 && (
+            <button 
+              className="btn" 
+              onClick={() => setDeleteTarget(Array.from(selectedOutputs))}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--danger)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 500 }}
+            >
+              <Trash2 size={16} /> Hapus Terpilih ({selectedOutputs.size})
+            </button>
+          )}
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <select
+              className="form-control"
+              style={{ width: '140px' }}
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
+            >
+              <option value="date_desc">Urut: Terbaru</option>
+              <option value="date_asc">Urut: Terlama</option>
+              <option value="group_asc">Grup: A-Z</option>
+              <option value="group_desc">Grup: Z-A</option>
+            </select>
+          </div>
+
           <div className="form-group" style={{ marginBottom: 0 }}>
             <select
               className="form-control"
@@ -313,6 +400,14 @@ export default function OutputList() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                <th style={{ padding: '16px 12px', width: '40px', textAlign: 'center' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={filteredOutputs.length > 0 && selectedOutputs.size === filteredOutputs.length}
+                    onChange={handleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
+                  />
+                </th>
                 <th style={{ padding: '16px 12px', fontWeight: 500, width: '80px' }}>Preview</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500 }}>ID Video</th>
                 <th style={{ padding: '16px 12px', fontWeight: 500, textAlign: 'center', whiteSpace: 'nowrap', width: isMobile ? '80px' : 'auto' }}>Selesai</th>
@@ -325,7 +420,7 @@ export default function OutputList() {
             </thead>
             <tbody>
               {paginatedOutputs.length === 0 ? (
-                <tr><td colSpan={isMobile ? "4" : "8"} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <tr><td colSpan={isMobile ? "5" : "9"} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   <Film size={48} style={{ opacity: 0.3, margin: '0 auto 16px', display: 'block' }} />
                   {outputs.length === 0 ? (
                     <>
@@ -337,7 +432,17 @@ export default function OutputList() {
                   )}
                 </td></tr>
               ) : paginatedOutputs.map((out) => (
-                <tr key={out.id} style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' }} className="hover-bg-light">
+                <tr key={out.id} style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s', backgroundColor: selectedOutputs.has(out.full_id) ? 'rgba(99, 102, 241, 0.05)' : 'transparent' }} className="hover-bg-light">
+                  {/* Checkbox */}
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedOutputs.has(out.full_id)}
+                      onChange={() => handleSelect(out.full_id)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
+                    />
+                  </td>
+                  
                   {/* Preview / Cover + Play Button */}
                   <td style={{ padding: '10px 12px' }}>
                     <div
@@ -484,7 +589,7 @@ export default function OutputList() {
 
                       {/* Delete */}
                       <td style={{ padding: '16px 12px', textAlign: 'center' }}>
-                        <button onClick={() => setDeleteTarget(out.full_id)} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus video">
+                        <button onClick={() => setDeleteTarget([out.full_id])} className="btn btn-danger" style={{ padding: '6px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none' }} title="Hapus video">
                           <Trash2 size={16} />
                         </button>
                       </td>
@@ -690,7 +795,7 @@ export default function OutputList() {
           <button
             className="btn btn-secondary hover-bg-light"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', padding: '8px 12px', border: 'none', textAlign: 'left', color: 'var(--danger)' }}
-            onClick={() => { setDeleteTarget(actionMenu.out.full_id); setActionMenu(null); }}
+            onClick={() => { setDeleteTarget([actionMenu.out.full_id]); setActionMenu(null); }}
           >
             <Trash2 size={14} /> Hapus Video
           </button>

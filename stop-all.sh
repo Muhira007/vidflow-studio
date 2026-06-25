@@ -4,7 +4,7 @@
 # ============================================
 set -e
 
-LOGS_DIR="/home/kangdemuh/aplikasi/video-editor/claude2/logs"
+LOGS_DIR="/home/kangdemuh/aplikasi/vidflow/logs"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

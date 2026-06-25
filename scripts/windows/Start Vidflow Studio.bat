@@ -15,7 +15,7 @@ echo.
 :: Jalankan start script di WSL. Service di-start dengan nohup di background
 :: sehingga tetap hidup setelah wsl.exe selesai. WSL VM tidak auto-shutdown
 :: berkat vmIdleTimeout=-1 di .wslconfig.
-wsl -d Ubuntu-26.04 --cd "/home/kangdemuh/aplikasi/video-editor/claude2" bash -c "./start-all.sh"
+wsl -d Ubuntu-26.04 --cd "/home/kangdemuh/aplikasi/vidflow" bash -c "./start-all.sh"
 
 echo.
 echo ========================================
@@ -27,7 +27,7 @@ echo  API Docs : http://localhost:8000/docs
 echo  Logs     : logs\  (di direktori proyek)
 echo.
 echo  JIKA frontend tidak bisa dibuka, jalankan:
-echo    wsl -d Ubuntu-26.04 --cd "/home/kangdemuh/aplikasi/video-editor/claude2" bash -c "./stop-all.sh ^&^& ./start-all.sh"
+echo    wsl -d Ubuntu-26.04 --cd "/home/kangdemuh/aplikasi/vidflow" bash -c "./stop-all.sh ^&^& ./start-all.sh"
 echo.
 echo Tekan tombol apa saja untuk menutup jendela ini.
 echo (Service TETAP berjalan -- aman ditutup!)
