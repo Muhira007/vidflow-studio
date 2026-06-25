@@ -7,9 +7,9 @@
 | Nama Produk | **Vidflow Studio** — Automated affiliate video editing with AI-powered pipeline |
 | Versi Dokumen | 1.0 |
 | Tanggal | 20 Juni 2026 |
-| Status | **Production** — Fase 1-6 complete, live di `app.muhirastore.com` |
+| Status | **Production** — Fase 1-6 complete, berjalan di localhost (WSL) |
 | Author | **Dede Muhira (kang demuh)** |
-| Tipe Deploy | ✅ Local (MVP) → ✅ Server Online (Production) |
+| Tipe Deploy | ✅ Local (WSL) — `./start-all.sh` one-click startup |
 
 ---
 
@@ -46,7 +46,7 @@
 
 Aplikasi web-based dengan **admin panel** sebagai pusat kendali untuk mengotomatisasi pipeline edit video harian yang sifatnya repetitif: memotong bagian sepi, menambahkan caption otomatis, menambahkan cover, dan merender ke resolusi final. Sumber video mentah ditaruh manual oleh admin ke dalam folder yang diberi nama berupa ID unik; sistem membaca folder tersebut, mendaftarkannya ke database, lalu memprosesnya secara otomatis sesuai konfigurasi yang diatur dari dashboard.
 
-Fase awal (MVP) berjalan **local** di laptop admin, dengan rencana migrasi ke **server online** begitu pipeline inti sudah stabil.
+Aplikasi berjalan **local** di laptop admin via WSL, dengan startup one-click `./start-all.sh`.
 
 ---
 
@@ -70,7 +70,7 @@ Karena polanya konsisten, pekerjaan ini cocok untuk diotomatisasi. Tanpa otomati
 | Konsistensi kualitas output | 100% video yang diproses punya caption, cover, dan resolusi sesuai konfigurasi tanpa intervensi manual |
 | Sistem bisa diandalkan jalan tanpa diawasi | Job berhasil (success rate) ≥ 95% tanpa perlu retry manual |
 | Mudah dikontrol tanpa coding | Semua parameter (threshold silence, style caption, tipe cover, resolusi) bisa diubah dari dashboard tanpa edit kode |
-| Siap migrasi ke server online | Deployment local ke server hanya butuh perubahan konfigurasi environment, bukan re-arsitektur |
+| Siap digunakan harian | Sistem bisa dinyalakan/matikan dengan satu klik, tanpa perlu setup ulang |
 
 ---
 
@@ -266,8 +266,8 @@ Saat ini sistem dirancang **single-admin** (belum ada kebutuhan multi-user/role)
 |---|---|
 | Performa | Satu video durasi ≤ 10 menit selesai diproses penuh (silence cut → caption → cover → render) dalam waktu wajar sesuai kapasitas hardware; target spesifik ditentukan setelah benchmark awal |
 | Reliabilitas | Job yang gagal di satu step tidak menghapus progres step sebelumnya; bisa di-retry dari step yang gagal saja |
-| Skalabilitas | Arsitektur job queue memungkinkan penambahan worker tanpa mengubah kode utama (relevan saat migrasi ke server) |
-| Portabilitas | MVP local menggunakan service native (PostgreSQL, Redis) dengan startup scripts. Migrasi ke server akan menggunakan Docker untuk transisi tanpa setup ulang |
+| Skalabilitas | Arsitektur job queue memungkinkan penambahan worker tanpa mengubah kode utama |
+| Portabilitas | Menggunakan service native (PostgreSQL, Redis) dengan startup scripts. Konfigurasi terpusat via `.env` |
 | Maintainability | Parameter pipeline (threshold, style, dsb.) disimpan di database/config, bukan hardcoded |
 | Observability | Setiap job punya log step-by-step yang bisa ditelusuri saat terjadi error |
 
@@ -476,15 +476,14 @@ erDiagram
 |---|---|---|
 | Backend API | Python + FastAPI | Async, ekosistem kaya untuk audio/video processing |
 | Job Queue | Celery + Redis | Memisahkan proses berat dari request HTTP, mudah ditambah worker |
-| Database | PostgreSQL | Migrasi local → server tinggal ganti connection string |
+| Database | PostgreSQL | Native service WSL, port 5432 |
 | Frontend Admin | React + Vite | Cocok untuk dashboard interaktif (slider, color picker, dsb.) |
 | Video Engine | FFmpeg | Standar industri untuk cut, burn subtitle, render |
 | Folder Watcher | Python `watchdog` | Deteksi perubahan filesystem real-time |
 | Cover Generation | Pillow (PIL) | Compositing gambar + auto text-wrap + font adaptif |
 | VAD (Speech Detection) | Silero VAD (PyTorch) | Deteksi suara manusia vs noise, jalan lokal CPU |
 | AI Caption & Cover Title | DeepSeek V4 Flash API | Generate caption sosmed + judul cover dari transkrip |
-| Deployment (MVP Local) | Native WSL services + Shell scripts | PostgreSQL & Redis sebagai service native; `start-all.sh` untuk one-click startup |
-| Deployment (Server Online) | Docker + Docker Compose | Untuk fase migrasi ke server (Fase 6) |
+| Deployment | Native WSL services + Shell scripts | PostgreSQL & Redis sebagai service native; `start-all.sh` + `.bat` launchers untuk one-click operation |
 
 ---
 
@@ -533,7 +532,7 @@ erDiagram
 
 - ✅ Autentikasi admin dashboard (JWT: username/password + token 24 jam + logout)
 - ✅ API key layanan eksternal (STT/LLM) disimpan di environment variable, tidak hardcoded di kode
-- ✅ Server online: HTTPS (Let's Encrypt), rate limiting (100 req/min), firewall UFW, backup database berkala
+- ✅ CORS middleware + JWT token 24 jam + login/logout dashboard
 
 ---
 
@@ -549,7 +548,7 @@ erDiagram
 | Fase 3 — Auto Cover | Minggu 8 | Generate cover + AI judul (DeepSeek) + konfigurasi admin |
 | Fase 4 — Render & Dashboard Lengkap | Minggu 9–10 | Render multi-resolusi multi-codec, dashboard monitoring + halaman hasil render |
 | Fase 5 — Testing & Enhancement | Minggu 11–12 | E2E testing, VAD AI, AI caption sosmed, Windows launcher |
-| Fase 6 — Migrasi Server Online | Menyusul | Setup VPS/cloud, CI/CD, monitoring produksi |
+| Fase 6 — Finalisasi | Selesai | JWT auth, mobile UI, bug fixes, dokumentasi |
 
 ---
 
@@ -557,7 +556,7 @@ erDiagram
 
 | Risiko | Dampak | Kemungkinan | Mitigasi |
 |---|---|---|---|
-| Render 4K berat di laptop spek rendah | Proses lambat, bottleneck harian | Tinggi | Hardware encoding (NVENC/QSV) bila tersedia; pertimbangkan percepat migrasi ke server untuk volume tinggi |
+| Render 4K berat di laptop spek rendah | Proses lambat, bottleneck harian | Tinggi | Hardware encoding (NVENC/QSV) bila tersedia; gunakan resolusi 1080p untuk volume tinggi |
 | Biaya API naik seiring volume | Biaya operasional membengkak | Sedang | Monitoring usage rutin, set budget alert di provider |
 | Akurasi caption rendah karena audio noisy | Caption perlu koreksi manual, mengurangi manfaat otomatisasi | Sedang | Uji kualitas STT dengan sampel audio asli sebelum full rollout |
 | Frame cover otomatis tidak representatif | Cover kurang menarik/asal | Sedang | Iterasi logic scene detection, sediakan opsi override manual di fase lanjutan |
@@ -577,10 +576,6 @@ erDiagram
 ## 23. Pertanyaan Terbuka
 
 - Nama final aplikasi? ~~Sudah diputuskan: **Vidflow Studio**~~
-- Provider hosting untuk fase server online (VPS biasa, cloud provider tertentu)?
-- Apakah suatu saat butuh multi-user/role, atau tetap single-admin selamanya?
-- Berapa lama retention policy untuk file output & file mentah setelah diproses?
-- Apakah notifikasi (email/Telegram) dibutuhkan saat job gagal, atau cukup dashboard saja?
 
 ---
 

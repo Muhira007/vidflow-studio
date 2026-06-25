@@ -2,8 +2,6 @@
 
 **Automated affiliate video editing with streamlined workflow automation.**
 
-🌐 **Production:** [https://app.muhirastore.com](https://app.muhirastore.com)
-
 ### Fitur utama:
 
 - 🤖 **VAD/AI Speech Detection** — deteksi suara manusia vs noise (Silero VAD)
@@ -17,7 +15,6 @@
 - ✅ **Batch Render** — select all + auto-queue WAITING
 - 🔐 **JWT Authentication** — login dashboard (admin panel)
 - 📱 **Mobile Responsive** — akses dari HP via WiFi
-- 🐳 **Docker Deploy** — production-ready di VPS
 
 ## 🏗 Arsitektur Sistem
 
@@ -84,14 +81,10 @@ Cukup **double-click** shortcut yang tersedia di Desktop:
 
 | Shortcut | Fungsi |
 |----------|--------|
-| 🟢 **Start Vidflow Studio.bat** | Menyalakan semua service |
-| 🔴 **Stop Vidflow Studio.bat** | Mematikan semua service |
+| 🟢 **Start Video Editor.bat** | Menyalakan semua service |
+| 🔴 **Stop Video Editor.bat** | Mematikan semua service |
 
-> **PENTING:** Sebelum pertama kali, salin file `scripts/windows/.wslconfig` ke `C:\Users\<user>\.wslconfig`, lalu restart WSL dengan perintah `wsl --shutdown` di PowerShell. Ini mencegah WSL VM auto-shutdown sehingga service tetap berjalan meski jendela terminal ditutup.
-
-Terminal akan terbuka dan menampilkan status tiap service. **Service tetap berjalan meskipun jendela ditutup** — tekan sembarang tombol untuk menutup jendela.
-
-> **Catatan:** File `.bat` terbaru ada di `scripts/windows/` — salin ke Desktop jika diperlukan.
+Terminal akan terbuka dan menampilkan status tiap service.
 
 ### Cara 2: Terminal WSL
 

@@ -3,8 +3,8 @@
 Dokumen ini melacak status pengembangan aplikasi **Vidflow Studio** berdasarkan PRD (*Product Requirements Document*).
 
 ## 📊 Status Keseluruhan
-- **Fase Saat Ini:** Fase 6 (Migrasi Server Online) - **Selesai (Production Ready)**
-- **Fase Berikutnya:** Maintenance & Scaling
+- **Fase Saat Ini:** Final — berjalan di localhost (WSL)
+- **Status:** Production Ready, digunakan harian
 
 ---
 
@@ -57,12 +57,7 @@ Dokumen ini melacak status pengembangan aplikasi **Vidflow Studio** berdasarkan 
 - [x] **Video Detail Modal:** Tombol `...` sekarang menampilkan detail video + riwayat job log per step.
 - [x] **Bug Fixes:** Delete endpoint (path converter), sync 500 error, DB column migration (`celery_task_id`, enum `CANCELLED`), output file matching, empty folder cleanup.
 
-### Fase 6: Migrasi Server Online (Juni 2026)
-- [x] **Dockerize Semua Service:** `docker-compose.yml` + Dockerfile untuk Backend, Celery, Nginx.
-- [x] **Setup VPS IDCloudHost:** Ubuntu 24.04, 4 Core, 8GB RAM.
-- [x] **Deploy ke Production:** `https://app.muhirastore.com` dengan Nginx reverse proxy.
-- [x] **HTTPS/SSL:** Let's Encrypt via Certbot, auto-renew cron.
-- [x] **Firewall UFW:** Port 22, 80, 443 only.
+### Fase 6: Finalisasi & Enhancement (Juni 2026)
 - [x] **JWT Authentication:** Login page + token-based API protection.
 - [x] **Path Configuration:** Module `paths.py` terpusat — APP_HOME env var.
 - [x] **Portrait Video Render Fix:** Orientasi vertikal auto-detect, output 1080×1920.
@@ -71,21 +66,20 @@ Dokumen ini melacak status pengembangan aplikasi **Vidflow Studio** berdasarkan 
 - [x] **Move File:** Pindahkan file video antar folder (context menu).
 - [x] **Delete Product Group:** Hapus grup produk tanpa hapus folder.
 - [x] **Upload Progress Bar:** Persentase + kecepatan upload real-time.
-- [x] **Download X-Accel-Redirect:** Nginx serve file langsung, 145x lebih cepat.
+- [x] **Download FileResponse:** FastAPI serve file langsung via streaming.
 - [x] **FFmpeg Optimization:** preset fast + CRF 18, render 2x lebih cepat.
 - [x] **Mobile UI Upgrade:** Responsive design, bottom nav bar, touch-friendly.
 - [x] **Mobile Access Tutorial:** Port forwarding WSL → akses dari HP via WiFi.
 - [x] **Dashboard Enhancement:** Recent Jobs 15 entri, hapus log, bersihkan riwayat.
-- [x] **Database Migration:** Export/import lokal → server via pg_dump.
-- [x] **Credential Security:** Password rotation, .env gitignored, Migrasi.md disensor.
+- [x] **Credential Security:** Password rotation, .env gitignored.
+- [x] **Server cleanup:** Hapus Docker, Nginx, file migrasi — fokus localhost.
 
 ---
 
-## 🏗️ Dalam Pengerjaan (WIP) / Tertunda
-- [ ] Auto-deploy via GitHub Actions (CI/CD).
-- [ ] Backup database otomatis ke cloud storage.
-- [ ] Monitoring production (Uptime Kuma).
-- [ ] CDN untuk file output (opsional).
+## 🏗️ Ide Mendatang (Opsional)
+- [ ] Backup database otomatis.
+- [ ] Auto-publish ke platform sosial media.
+- [ ] Analytics performa video (views, engagement).
 
 ---
 
@@ -118,9 +112,6 @@ graph TD
 - **Celery tidak auto-reload.** Setiap perubahan kode Python di backend, restart Celery.
 - **DeepSeek V4 Flash** — OpenAI-compatible, reasoning mode harus dinonaktifkan (`extra_body={"thinking": {"type": "disabled"}}`).
 - **Silero VAD** — 1.6MB model, CPU-only via PyTorch. Akurasi >90% deteksi suara manusia vs noise.
-- **Production URL:** `https://app.muhirastore.com` (HTTPS, Nginx reverse proxy).
-- **SSH Server:** `ssh kangdemuh@103.59.94.188` (VPS IDCloudHost Ubuntu 24.04).
-- **Deploy:** `git pull && docker compose up -d --build`.
 - Logs: `logs/backend.log`, `logs/frontend.log`, `logs/celery.log`.
 - DB logs: tabel `job_logs` untuk tracking per-step pipeline.
 - **Mobile Access:** Port forwarding WSL ke Windows → akses dari HP via WiFi.
