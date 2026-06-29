@@ -2,21 +2,69 @@
 
 **Automated affiliate video editing with streamlined workflow automation.**
 
-### Fitur utama:
+![Status](https://img.shields.io/badge/status-active-success) ![React](https://img.shields.io/badge/React-18-blue) ![Vite](https://img.shields.io/badge/Vite-5-purple) ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-teal) ![Python](https://img.shields.io/badge/Python-3.10+-blue) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue) ![Redis](https://img.shields.io/badge/Redis-6+-red) ![Celery](https://img.shields.io/badge/Celery-5+-green)
 
-- 🤖 **VAD/AI Speech Detection** — deteksi suara manusia vs noise (Silero VAD)
-- ✂️ **Silence Cut 3 Level** — amplitude-based + AI-based cutting
-- 📝 **Auto Caption** — transkripsi Whisper + burn-in subtitle
-- ✨ **AI Social Caption** — caption siap sosmed via DeepSeek (16 gaya bahasa, konteks produk)
-- 🖼️ **Auto Cover** — 3 template dual-color + AI-generated judul (konteks produk)
-- 🎥 **Multi-Codec Render** — H.264 / H.265 / WebM, HD/FHD
-- 🏷️ **Product Group** — mapping folder → nama produk untuk konteks AI
-- ⏹️ **Cancel Processing** — batalkan pipeline yang sedang berjalan
-- ✅ **Batch Render** — select all + auto-queue WAITING
-- 🔐 **JWT Authentication** — login dashboard (admin panel)
-- 📱 **Mobile Responsive** — akses dari HP via WiFi
+---
 
-## 🏗 Arsitektur Sistem
+## 📖 Daftar Isi
+
+- [Fitur Utama](#-fitur-utama)
+- [Tech Stack](#-tech-stack)
+- [Persyaratan Sistem](#-persyaratan-sistem)
+- [Panduan Instalasi & Persiapan](#-panduan-instalasi--persiapan)
+- [Cara Menjalankan Aplikasi](#-cara-menjalankan-aplikasi)
+- [Cara Penggunaan (Workflow)](#-cara-penggunaan-workflow)
+- [Variabel Lingkungan (.env)](#️-variabel-lingkungan-env)
+- [Tips & Troubleshooting](#-tips--troubleshooting)
+- [Lisensi](#-lisensi)
+
+---
+
+## 🎯 Fitur Utama
+
+| Modul | Fitur |
+|---|---|
+| **🤖 VAD/AI Speech** | Deteksi suara manusia vs noise (Silero VAD) |
+| **✂️ Silence Cut 3 Level** | Amplitude-based + AI-based cutting |
+| **📝 Auto Caption** | Transkripsi Whisper + burn-in subtitle |
+| **✨ AI Social Caption** | Caption siap sosmed via DeepSeek (16 gaya bahasa, konteks produk) |
+| **🖼️ Auto Cover** | 3 template dual-color + AI-generated judul (konteks produk) |
+| **🎥 Multi-Codec Render** | H.264 / H.265 / WebM, HD/FHD |
+| **🏷️ Product Group** | Mapping folder → nama produk untuk konteks AI |
+| **⏹️ Cancel Processing** | Batalkan pipeline yang sedang berjalan |
+| **✅ Batch Render** | Select all + auto-queue WAITING |
+| **🔐 JWT Authentication** | Login dashboard (admin panel) |
+| **📱 Mobile Responsive** | Akses dari HP via WiFi |
+
+---
+
+## 💻 Tech Stack
+
+```text
+┌─────────────────────────────────────────┐
+│              BROWSER (Windows)           │
+│         React 18 · Vite · Tailwind      │
+└──────────────┬──────────────────────────┘
+               │ REST API (fetch)
+┌──────────────▼──────────────────────────┐
+│            WSL Ubuntu                    │
+│         FastAPI · Python 3.10+          │
+│                                          │
+│  ┌──────────────────────────────────┐   │
+│  │         PostgreSQL Database       │   │
+│  └──────────────────────────────────┘   │
+│  ┌──────────────────────────────────┐   │
+│  │         Redis & Celery            │   │
+│  └──────────────────────────────────┘   │
+└──────────────┬──────────────────────────┘
+               │
+    ┌──────────┼──────────┐
+    ▼          ▼          ▼
+┌──────┐ ┌──────┐ ┌────────┐
+│Silero│ │Deep  │ │OpenAI  │
+│ VAD  │ │Seek  │ │Whisper │
+└──────┘ └──────┘ └────────┘
+```
 
 - **Frontend:** React + Vite — Dashboard interaktif
 - **Backend API:** FastAPI — Orchestrator + REST API
